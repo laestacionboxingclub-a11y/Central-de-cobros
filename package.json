@@ -1,0 +1,17 @@
+{
+  "name": "central-de-cobros",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:caja": "npm run dev -w caja",
+    "dev:panel-dueno": "npm run dev -w panel-dueno",
+    "dev:panel-central": "npm run dev -w panel-central",
+    "build:caja": "npm run build -w caja",
+    "build:panel-dueno": "npm run build -w panel-dueno",
+    "build:panel-central": "npm run build -w panel-central"
+  }
+}

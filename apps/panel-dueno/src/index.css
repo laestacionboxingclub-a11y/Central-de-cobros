@@ -1,0 +1,40 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f5f6f5;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.app-label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.app-status {
+  color: #555;
+}
+
+.ok {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.warn {
+  color: #b45309;
+  font-weight: 600;
+}
