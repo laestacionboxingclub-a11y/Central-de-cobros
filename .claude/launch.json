@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "caja",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:caja"],
+      "port": 5173
+    },
+    {
+      "name": "panel-dueno",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:panel-dueno"],
+      "port": 5174
+    },
+    {
+      "name": "panel-central",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:panel-central"],
+      "port": 5175
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // App de caja: PWA instalable en la tablet. La lógica de cacheo offline
 // (guardar ventas y stock localmente) se configura en el Paso 5.
 export default defineConfig({
+  server: { port: 5173, strictPort: true },
   plugins: [
     react(),
     VitePWA({
