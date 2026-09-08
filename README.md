@@ -135,6 +135,21 @@ Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tie
   - **Comparación con el período anterior**: "▲ 17% vs. período anterior" al lado del total vendido (mismo largo de período, inmediatamente antes).
   - **Descargar CSV**: baja todo el reporte del período elegido en un archivo para abrir en Excel/Sheets.
 
+### Alertas de stock bajo por email
+
+Además del aviso que ya se ve dentro del panel (pestaña Productos), hay una función que corre sola **una vez por día** y le manda un email al dueño de cada verdulería si algún producto quedó por debajo de su stock mínimo. El código está en [`supabase/functions/alertas-stock/index.ts`](supabase/functions/alertas-stock/index.ts).
+
+Esto es infraestructura de verdad (no solo código de la app), así que hace falta un servicio externo para mandar los mails: [Resend](https://resend.com) (tiene plan gratuito). Son varios pasos manuales, uno solo, no hay que repetirlos:
+
+1. **Creá una cuenta en [resend.com](https://resend.com)** (gratis) y andá a **API Keys → Create API Key**. Copiá la clave (empieza con `re_...`).
+2. **Creá la función en Supabase**: en tu proyecto, andá a **Edge Functions → Deploy a new function**, ponele el nombre `alertas-stock`, y pegá el contenido completo de `supabase/functions/alertas-stock/index.ts`. Desplegar.
+3. **Cargá el secreto**: en esa misma función, buscá **Secrets** (o **Project Settings → Edge Functions**) y agregá `RESEND_API_KEY` con la clave del paso 1.
+4. **Programá que corra sola**: abrí `supabase/migrations/0004_alertas_stock_cron.sql`, reemplazá `TU_SERVICE_ROLE_KEY` por la que está en **Project Settings → API → service_role** (la "secret", no la "anon" — nunca la compartas con nadie más), y corré el archivo completo en el **SQL Editor**. Con eso queda programado para correr todos los días a las 9am (hora Argentina).
+
+**Limitación a tener en cuenta:** mientras no verifiques un dominio propio en Resend, el remitente de prueba (`onboarding@resend.dev`) solo entrega mails a la casilla con la que te registraste en Resend — no a la de cada dueño real. Para que esto funcione con clientes de verdad, en algún momento hay que verificar un dominio (por ejemplo `centraldecobros.com`) en Resend; es un paso más, avisame cuando llegue ese momento y lo hacemos.
+
+No pude probar el envío real de emails yo mismo (necesita tu cuenta de Resend y tu panel de Supabase), así que esta parte conviene que la pruebes vos: una vez armado todo, podés forzar una ejecución manual desde **Edge Functions → alertas-stock → Invoke** para ver si te llega el mail sin esperar al día siguiente.
+
 Como la seguridad de la base ya quedó resuelta en el Paso 2 (cada dueño solo puede tocar los datos de su propia verdulería), esta pantalla no necesitó ninguna migración nueva de Supabase.
 
 ## Requisito para correr el proyecto: Node.js
