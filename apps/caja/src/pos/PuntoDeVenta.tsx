@@ -160,9 +160,12 @@ export function PuntoDeVenta({
     setCobrando(false)
   }
 
-  if (imprimiendo) {
+  if (imprimiendo && ventaPendiente) {
     return (
       <ImprimiendoTicket
+        tenant={tenant}
+        caja={caja}
+        venta={ventaPendiente}
         onFinish={() => {
           setVentaConfirmada(ventaPendiente)
           setImprimiendo(false)

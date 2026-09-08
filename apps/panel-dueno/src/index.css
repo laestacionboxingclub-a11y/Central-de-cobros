@@ -133,6 +133,30 @@ body {
   color: #444;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: transform 0.1s ease;
+}
+
+.panel-tab:active {
+  transform: scale(0.96);
+}
+
+.reportes-caja-detalle {
+  animation: entra-detalle-caja 0.25s cubic-bezier(0.22, 0.61, 0.19, 1);
+}
+
+@keyframes entra-detalle-caja {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reportes-caja-detalle,
+  .panel-tab {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 .panel-tabs-secundarias .panel-tab {

@@ -97,7 +97,7 @@ La app de Caja ahora tiene el flujo completo de venta:
 1. **Elegir caja**: la primera vez que se abre la app en una tablet, pregunta qué caja es (o deja crear una nueva). Queda guardado en esa tablet — no se vuelve a preguntar.
 2. **Catálogo**: lista los productos cargados de esa verdulería, con buscador y foto (si el producto tiene una cargada; si no, muestra un ícono genérico).
 3. **Carrito**: tocar un producto abre un teclado numérico grande (tipo balanza) para cargar la cantidad exacta, con atajos para pesos/cantidades comunes. Tocar la cantidad de una línea ya agregada la vuelve a abrir para corregirla.
-4. **Cobro**: elegir método de pago (efectivo, posnet o transferencia) y confirmar. Al cobrar se ve una animación de "ticket saliendo de la impresora" antes de mostrar el comprobante.
+4. **Cobro**: elegir método de pago (efectivo, posnet o transferencia) y confirmar. Al cobrar se ve una animación de "ticket saliendo de la impresora" — con el contenido real del comprobante impreso ahí mismo (no un cartel en blanco) y un cabezal verde que "escanea" el papel — antes de mostrar el comprobante final. Hay animaciones chicas en varios lugares más (el carrito, los botones, el teclado) para que se sienta más vivo; todas respetan la preferencia "reducir movimiento" del sistema operativo, para quien la tenga activada.
 5. **Comprobante**: se muestra en pantalla con formato de ticket y un botón "Imprimir" que abre el diálogo de impresión del navegador/tablet (todavía no manda comandos a una impresora térmica específica — eso se ajusta más adelante según el modelo real que tenga cada cliente).
 
 Detalle técnico importante: registrar una venta (la venta + sus líneas + los movimientos de stock) es **una sola operación atómica** en la base de datos — o se guarda todo, o no se guarda nada. Está implementado como una función de Postgres (`registrar_venta`, en [`supabase/migrations/0002_registrar_venta.sql`](supabase/migrations/0002_registrar_venta.sql)) para evitar que quede una venta a medias si se corta la conexión en el momento exacto de cobrar.
@@ -128,7 +128,7 @@ Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tie
 - **Stock**: cargar mercadería nueva, registrar una merma/pérdida, o hacer un ajuste manual. Se ve el stock actual de cada producto antes de tocarlo.
 - **Gastos**: cargar gastos (fecha, categoría, descripción, monto) y ver el historial.
 - **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con períodos rápidos (hoy / esta semana / este mes) o un rango de fechas a elección. Además:
-  - **Por caja**: cuánto vendió cada caja en el período, y cuánto efectivo acumuló (para el arqueo).
+  - **Por caja**: elegís una caja específica (no es solo una lista) y ves su propio detalle — ventas, total, efectivo acumulado, gráfico por día, método de pago y productos más vendidos de esa caja en particular. También queda la vista "Todas" para comparar todas juntas de un vistazo.
   - **Por cajero**: cuánto vendió cada persona.
   - **Productos más vendidos**: top 10 por cantidad vendida.
   - **Gráfico de ventas por día**: un vistazo rápido de cómo viene el período.

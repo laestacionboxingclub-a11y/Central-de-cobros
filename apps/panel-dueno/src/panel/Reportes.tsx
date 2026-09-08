@@ -77,6 +77,7 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
   const [totalAnterior, setTotalAnterior] = useState<number | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cajaSeleccionada, setCajaSeleccionada] = useState<string | null>(null)
 
   const { desde, hasta, desdeYMD, hastaYMD } = useMemo(() => {
     if (periodo === 'personalizado') {
@@ -158,6 +159,50 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
       .filter((f) => f.ventas > 0)
       .sort((a, b) => b.total - a.total)
   }, [ventas, cajas])
+
+  // Detalle completo de UNA caja elegida: sus propias ventas, método de pago,
+  // ventas por día y productos más vendidos — no solo la fila resumen.
+  const detalleCaja = useMemo(() => {
+    if (!cajaSeleccionada) return null
+    const caja = cajas.find((c) => c.id === cajaSeleccionada)
+    if (!caja) return null
+
+    const ventasCaja = ventas.filter((v) => v.caja_id === cajaSeleccionada)
+    const total = ventasCaja.reduce((acc, v) => acc + v.total, 0)
+    const porMetodo: Record<MetodoPago, number> = { efectivo: 0, posnet: 0, transferencia: 0 }
+    for (const v of ventasCaja) porMetodo[v.metodo_pago] += v.total
+
+    const idsVenta = new Set(ventasCaja.map((v) => v.id))
+    const itemsCaja = items.filter((i) => idsVenta.has(i.venta_id))
+    const mapaProd = new Map<string, { cantidad: number; monto: number }>()
+    for (const item of itemsCaja) {
+      const actual = mapaProd.get(item.producto_id) ?? { cantidad: 0, monto: 0 }
+      actual.cantidad += item.cantidad
+      actual.monto += item.subtotal
+      mapaProd.set(item.producto_id, actual)
+    }
+    const masVendidosCaja = [...mapaProd.entries()]
+      .map(([productoId, datos]) => ({ producto: productos.find((p) => p.id === productoId), ...datos }))
+      .filter((f): f is { producto: Producto; cantidad: number; monto: number } => Boolean(f.producto))
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 5)
+
+    const mapaDia = new Map<string, number>()
+    for (const v of ventasCaja) {
+      const clave = fechaLocalYMD(new Date(v.creada_en))
+      mapaDia.set(clave, (mapaDia.get(clave) ?? 0) + v.total)
+    }
+
+    return {
+      caja,
+      cantidadVentas: ventasCaja.length,
+      total,
+      efectivo: porMetodo.efectivo,
+      porMetodo,
+      masVendidos: masVendidosCaja,
+      porDia: [...mapaDia.entries()].sort(([a], [b]) => a.localeCompare(b))
+    }
+  }, [cajaSeleccionada, cajas, ventas, items, productos])
 
   const masVendidos = useMemo(() => {
     const mapa = new Map<string, { cantidad: number; monto: number }>()
@@ -345,29 +390,133 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
           </table>
 
           <h3>Por caja</h3>
-          {porCaja.length === 0 ? (
-            <p className="app-status">No hay ventas de ninguna caja en este período.</p>
+          {cajas.length === 0 ? (
+            <p className="app-status">Todavía no hay ninguna caja creada.</p>
           ) : (
-            <table className="panel-tabla">
-              <thead>
-                <tr>
-                  <th>Caja</th>
-                  <th>Ventas</th>
-                  <th>Total vendido</th>
-                  <th>Efectivo acumulado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {porCaja.map((f) => (
-                  <tr key={f.caja.id}>
-                    <td>{f.caja.nombre}</td>
-                    <td>{f.ventas}</td>
-                    <td>${f.total.toFixed(2)}</td>
-                    <td>${f.efectivo.toFixed(2)}</td>
-                  </tr>
+            <>
+              <div className="panel-tabs panel-tabs-secundarias">
+                <button
+                  className={`panel-tab ${!cajaSeleccionada ? 'activo' : ''}`}
+                  onClick={() => setCajaSeleccionada(null)}
+                >
+                  Todas
+                </button>
+                {cajas.map((c) => (
+                  <button
+                    key={c.id}
+                    className={`panel-tab ${cajaSeleccionada === c.id ? 'activo' : ''}`}
+                    onClick={() => setCajaSeleccionada(c.id)}
+                  >
+                    {c.nombre}
+                  </button>
                 ))}
-              </tbody>
-            </table>
+              </div>
+
+              {!cajaSeleccionada ? (
+                porCaja.length === 0 ? (
+                  <p className="app-status">No hay ventas de ninguna caja en este período.</p>
+                ) : (
+                  <table className="panel-tabla">
+                    <thead>
+                      <tr>
+                        <th>Caja</th>
+                        <th>Ventas</th>
+                        <th>Total vendido</th>
+                        <th>Efectivo acumulado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {porCaja.map((f) => (
+                        <tr key={f.caja.id}>
+                          <td>{f.caja.nombre}</td>
+                          <td>{f.ventas}</td>
+                          <td>${f.total.toFixed(2)}</td>
+                          <td>${f.efectivo.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              ) : (
+                detalleCaja && (
+                  <div key={cajaSeleccionada} className="reportes-caja-detalle">
+                    <div className="panel-stats">
+                      <div className="panel-stat">
+                        <span className="panel-stat-etiqueta">Ventas</span>
+                        <span className="panel-stat-valor">{detalleCaja.cantidadVentas}</span>
+                      </div>
+                      <div className="panel-stat">
+                        <span className="panel-stat-etiqueta">Total vendido</span>
+                        <span className="panel-stat-valor">${detalleCaja.total.toFixed(2)}</span>
+                      </div>
+                      <div className="panel-stat">
+                        <span className="panel-stat-etiqueta">Efectivo acumulado</span>
+                        <span className="panel-stat-valor">${detalleCaja.efectivo.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {detalleCaja.cantidadVentas === 0 ? (
+                      <p className="app-status">{detalleCaja.caja.nombre} no tiene ventas en este período.</p>
+                    ) : (
+                      <>
+                        {detalleCaja.porDia.length > 1 && (
+                          <div className="reportes-chart-wrap">
+                            <div className="reportes-chart">
+                              {(() => {
+                                const maxDia = Math.max(1, ...detalleCaja.porDia.map(([, t]) => t))
+                                return detalleCaja.porDia.map(([fecha, total]) => (
+                                  <div
+                                    key={fecha}
+                                    className="reportes-barra-col"
+                                    title={`${fecha}: $${total.toFixed(2)}`}
+                                  >
+                                    <div className="reportes-barra" style={{ height: `${(total / maxDia) * 100}%` }} />
+                                    <span className="reportes-barra-etiqueta">{fecha.slice(5)}</span>
+                                  </div>
+                                ))
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        <table className="panel-tabla">
+                          <tbody>
+                            {METODOS.map((m) => (
+                              <tr key={m}>
+                                <td>{ETIQUETA_METODO[m]}</td>
+                                <td>${detalleCaja.porMetodo[m].toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        <p className="app-status">Productos más vendidos en {detalleCaja.caja.nombre}</p>
+                        <table className="panel-tabla">
+                          <thead>
+                            <tr>
+                              <th>Producto</th>
+                              <th>Cantidad</th>
+                              <th>Monto</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detalleCaja.masVendidos.map((f) => (
+                              <tr key={f.producto.id}>
+                                <td>{f.producto.nombre}</td>
+                                <td>
+                                  {f.cantidad} {f.producto.unidad_medida}
+                                </td>
+                                <td>${f.monto.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+                  </div>
+                )
+              )}
+            </>
           )}
 
           <h3>Por cajero</h3>
