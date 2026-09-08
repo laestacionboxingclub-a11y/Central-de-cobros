@@ -1,6 +1,7 @@
 import { isSupabaseConfigured } from '@cdc/shared'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { LoginPage } from './auth/LoginPage'
+import { Clientes } from './central/Clientes'
 
 const ROLES_PERMITIDOS = ['superadmin']
 const ETIQUETA_APP = 'Panel Central (Súper-Admin)'
@@ -38,16 +39,28 @@ function Contenido() {
     )
   }
 
+  if (!perfil) {
+    return (
+      <main className="app-shell">
+        <p className="app-status">Cargando...</p>
+      </main>
+    )
+  }
+
   return (
-    <main className="app-shell">
-      <h1>Central de Cobros</h1>
-      <p className="app-label">{ETIQUETA_APP}</p>
-      <p className="app-status">
-        Sesión iniciada como {perfil?.nombre} ({perfil?.rol})
-      </p>
-      <p className="app-status">Todavía sin alta de clientes ni soporte remoto (Paso 7).</p>
-      <button onClick={logout}>Cerrar sesión</button>
-    </main>
+    <div className="panel-layout">
+      <header className="panel-header">
+        <div>
+          <strong>{ETIQUETA_APP}</strong> · {perfil.nombre}
+        </div>
+        <button className="link-btn" onClick={logout}>
+          Cerrar sesión
+        </button>
+      </header>
+      <main className="panel-contenido">
+        <Clientes />
+      </main>
+    </div>
   )
 }
 

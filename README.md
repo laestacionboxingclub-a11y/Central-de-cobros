@@ -2,7 +2,7 @@
 
 Sistema de punto de venta multi-tenant para verdulerías. Este repo contiene las 3 apps del sistema y el código compartido entre ellas.
 
-**Estado actual: Paso 6 (panel del dueño).** Ya se pueden cargar productos, stock y gastos, y ver reportes, todo desde una pantalla — sin tocar SQL a mano. Todavía falta el panel central para vos (Paso 7).
+**Estado actual: Paso 7 (panel central).** Las 6 fases de la Fase 1 del plan están completas — falta la prueba piloto con un cliente real (Paso 8).
 
 ## Estructura del proyecto
 
@@ -151,6 +151,22 @@ Esto es infraestructura de verdad (no solo código de la app), así que hace fal
 No pude probar el envío real de emails yo mismo (necesita tu cuenta de Resend y tu panel de Supabase), así que esta parte conviene que la pruebes vos: una vez armado todo, podés forzar una ejecución manual desde **Edge Functions → alertas-stock → Invoke** para ver si te llega el mail sin esperar al día siguiente.
 
 Como la seguridad de la base ya quedó resuelta en el Paso 2 (cada dueño solo puede tocar los datos de su propia verdulería), esta pantalla no necesitó ninguna migración nueva de Supabase.
+
+## Panel Central (Paso 7)
+
+Tu panel (el único que acepta rol `superadmin`) para administrar todos los clientes desde un solo lugar:
+
+- **Clientes**: lista de todas las verdulerías, con su estado (activo/suspendido), cuántos usuarios tiene, y fecha de alta. Botón para **activar/desactivar el acceso** con un clic — un cliente suspendido no puede entrar ni a la app de Caja ni al Panel del Dueño (el bloqueo ya está en el login de esas apps desde el Paso 3).
+- **+ Nuevo cliente**: crea la verdulería (el registro en la base). Importante: esto **no crea el login del dueño** — eso todavía requiere un paso manual en el dashboard de Supabase (ver abajo), porque crear usuarios de verdad necesita una clave que nunca debe estar en una app que corre en el navegador.
+- **Ver / Soporte**: entrás a los datos de cualquier cliente sin pedirle nada — usuarios, productos y stock, últimos gastos, ventas de los últimos 7 días. Esto funciona porque las reglas de seguridad del Paso 2 le dan al superadmin acceso a los datos de cualquier tenant, no solo al propio.
+- **Vincular usuario existente**: dentro de "Ver / Soporte", conecta un usuario ya creado en Authentication con ese cliente (como dueño o cajero).
+
+### Cómo dar de alta un cliente nuevo, de punta a punta
+
+1. Panel Central → **+ Nuevo cliente** → nombre de la verdulería.
+2. Supabase → **Authentication → Users → Add user** → cargá el email y una contraseña para el dueño. Copiá el **UID** que le asigna.
+3. Panel Central → entrá a ese cliente con **Ver / Soporte** → **+ Vincular usuario existente** → pegá el UID, el nombre del dueño, rol "Dueño".
+4. Listo — el dueño ya puede entrar al Panel del Dueño con el email y contraseña del paso 2.
 
 ## Requisito para correr el proyecto: Node.js
 
