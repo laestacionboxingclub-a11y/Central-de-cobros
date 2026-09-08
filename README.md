@@ -2,7 +2,7 @@
 
 Sistema de punto de venta multi-tenant para verdulerías. Este repo contiene las 3 apps del sistema y el código compartido entre ellas.
 
-**Estado actual: Paso 1 (base técnica).** Todavía no hay pantallas funcionales, ni tablas en la base de datos — eso empieza en el Paso 2.
+**Estado actual: Paso 2 (modelo de datos).** El esquema de la base de datos ya está diseñado y escrito. Todavía no hay pantallas funcionales — eso empieza en el Paso 3.
 
 ## Estructura del proyecto
 
@@ -41,7 +41,37 @@ El proyecto ya tiene el cliente de Supabase configurado en `packages/shared/src/
    ```
 4. El archivo `.env` nunca se sube a Git (está en `.gitignore`) — son tus claves, no van al repositorio.
 
-Sin este paso, cada app arranca igual pero muestra "Supabase: sin configurar" en pantalla. Todavía no hay tablas creadas — eso es el Paso 2.
+Sin este paso, cada app arranca igual pero muestra "Supabase: sin configurar" en pantalla.
+
+## Modelo de datos (Paso 2)
+
+El esquema completo está escrito en [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). Son 8 tablas:
+
+| Tabla | Para qué sirve |
+|---|---|
+| `tenants` | Cada verdulería/cliente que te alquila el sistema. Tiene un estado `activo`/`suspendido` que vos manejás desde el panel central según el pago de la membresía. |
+| `perfiles` | Las personas que usan el sistema: dueño, cajero o superadmin (vos). Se completa en el Paso 3 (login). |
+| `cajas` | Cada tablet física de una verdulería. |
+| `productos` | El catálogo de cada verdulería: nombre, precio, unidad (kg, unidad, etc.). |
+| `ventas` | Una fila por venta hecha en una caja. |
+| `venta_items` | Los productos de cada venta (líneas del ticket). |
+| `movimientos_stock` | El historial de entradas/salidas de stock (cargas, ventas, ajustes, mermas). |
+| `gastos` | Los gastos que carga el dueño. |
+
+Dos decisiones importantes, explicadas simple:
+
+- **El stock nunca es "un número que se pisa".** Cada carga de mercadería, cada venta, cada ajuste queda registrado como un movimiento separado (positivo o negativo) en `movimientos_stock`. El stock actual de un producto es la suma de todos sus movimientos (ver la vista `stock_actual`). Así, si dos cajas venden el mismo producto al mismo tiempo estando offline, cuando sincronizan no hay ningún conflicto que resolver: simplemente se suman ambos movimientos.
+- **Todos los clientes comparten las mismas tablas, pero aislados.** Cada tabla tiene una columna `tenant_id` y una regla de seguridad (Row Level Security) que hace que cada verdulería solo pueda ver y tocar sus propias filas — a nivel de la base de datos, no solo en la pantalla. Vos (superadmin) sos el único que puede ver todo, para dar soporte.
+
+### Cómo aplicar este modelo a tu base de Supabase
+
+Una vez que tengas el proyecto creado en supabase.com (ver sección anterior):
+
+1. En el panel de Supabase, andá a **SQL Editor** (menú de la izquierda).
+2. Abrí el archivo [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) de este proyecto, copiá todo el contenido y pegalo en el SQL Editor.
+3. Apretá **Run**. Se crean las 8 tablas, la vista de stock y las reglas de seguridad, todo de una vez.
+
+Si más adelante cambiamos el modelo, va a aparecer un archivo nuevo `0002_...sql` en la misma carpeta, y se corre de la misma forma.
 
 ## Requisito para correr el proyecto: Node.js
 

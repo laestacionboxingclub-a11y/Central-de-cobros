@@ -1,4 +1,99 @@
-// Tipos compartidos entre las 3 apps (caja, panel del dueño, panel central).
-// Se completan en el Paso 2, cuando se defina el modelo de datos
-// (clientes, productos, stock, ventas, cajas, cajeros, gastos).
-export {}
+// Tipos que reflejan el modelo de datos de Supabase (ver supabase/migrations/0001_init.sql).
+// Se actualizan a mano cada vez que cambia el esquema.
+
+export type EstadoTenant = 'activo' | 'suspendido'
+
+export interface Tenant {
+  id: string
+  nombre: string
+  estado: EstadoTenant
+  created_at: string
+  updated_at: string
+}
+
+export type RolPerfil = 'superadmin' | 'dueno' | 'cajero'
+
+export interface Perfil {
+  id: string
+  tenant_id: string | null
+  rol: RolPerfil
+  nombre: string
+  created_at: string
+}
+
+export interface Caja {
+  id: string
+  tenant_id: string
+  nombre: string
+  activa: boolean
+  created_at: string
+}
+
+export interface Producto {
+  id: string
+  tenant_id: string
+  nombre: string
+  unidad_medida: string
+  precio: number
+  stock_minimo: number | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type MetodoPago = 'efectivo' | 'posnet' | 'transferencia'
+export type EstadoVenta = 'completada' | 'anulada'
+
+export interface Venta {
+  id: string
+  tenant_id: string
+  caja_id: string
+  cajero_id: string
+  numero_comprobante: string
+  metodo_pago: MetodoPago
+  total: number
+  estado: EstadoVenta
+  creada_en: string
+  sincronizada_en: string
+}
+
+export interface VentaItem {
+  id: string
+  venta_id: string
+  producto_id: string
+  cantidad: number
+  precio_unitario: number
+  subtotal: number
+}
+
+export type TipoMovimientoStock = 'carga' | 'venta' | 'ajuste' | 'merma'
+
+export interface MovimientoStock {
+  id: string
+  tenant_id: string
+  producto_id: string
+  cantidad: number
+  tipo: TipoMovimientoStock
+  venta_id: string | null
+  caja_id: string | null
+  creado_por: string | null
+  creado_en: string
+  sincronizado_en: string
+}
+
+export interface StockActual {
+  tenant_id: string
+  producto_id: string
+  stock: number
+}
+
+export interface Gasto {
+  id: string
+  tenant_id: string
+  fecha: string
+  categoria: string
+  descripcion: string | null
+  monto: number
+  creado_por: string | null
+  creado_en: string
+}
