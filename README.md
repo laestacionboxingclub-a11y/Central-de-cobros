@@ -2,7 +2,7 @@
 
 Sistema de punto de venta multi-tenant para verdulerías. Este repo contiene las 3 apps del sistema y el código compartido entre ellas.
 
-**Estado actual: Paso 4 (punto de venta).** La app de Caja ya permite vender de verdad: catálogo, carrito, cobro e impresión de comprobante. Todavía no hay modo offline (Paso 5) ni panel del dueño para cargar stock/precios (Paso 6).
+**Estado actual: Paso 5 (modo offline).** La app de Caja ya puede seguir vendiendo aunque se corte el internet, y sincroniza sola cuando vuelve. Todavía no hay panel del dueño para cargar stock/precios (Paso 6).
 
 ## Estructura del proyecto
 
@@ -107,6 +107,18 @@ Como con el Paso 2, para aplicar esto a tu proyecto hay que correr ese archivo e
 ### Para probar una venta real
 
 Como todavía no existe el panel del dueño (Paso 6) para cargar productos, hace falta cargar unos productos de prueba a mano por SQL Editor, y tener un usuario con rol `dueno` o `cajero` (tu usuario actual es `superadmin`, que no tiene acceso a la app de Caja a propósito). Cuando quieras hacer esa prueba, avisame y te paso el SQL con los datos de ejemplo.
+
+## Modo offline (Paso 5)
+
+Si a la tablet se le corta el internet en medio del día, la app de Caja sigue funcionando:
+
+- **Vender sin conexión**: si al cobrar no se puede llegar a Supabase, la venta se guarda en la memoria de la tablet (no se pierde) y el comprobante se imprime igual — la plata ya cambió de mano, no tiene sentido hacer esperar al cliente. En la pantalla del comprobante aparece un aviso de "pendiente de sincronizar".
+- **Catálogo sin conexión**: la primera vez que la app carga los productos con internet, los guarda en la tablet. Si después se corta la conexión, sigue mostrando ese catálogo (con un aviso de que es una copia guardada) en vez de trabarse.
+- **Iniciar sesión sin conexión**: si la tablet ya inició sesión antes, puede seguir entrando aunque no haya internet en ese momento (usa los datos guardados del último ingreso).
+- **Sincronización automática**: apenas vuelve la conexión (o cada 30 segundos, por las dudas), la app manda sola las ventas pendientes a Supabase. También hay un botón "Sincronizar ahora" para forzarlo. Una barra arriba de la pantalla siempre muestra "En línea" o "Sin conexión", y cuántas ventas quedan pendientes.
+- **Sin duplicados**: como cada venta ya se identifica con un código único generado en la propia tablet (ver Paso 2), sincronizar una venta más de una vez no genera un cobro doble — la base de datos la reconoce y la descarta.
+
+Esto es puramente del lado de la app (no hace falta correr nada nuevo en Supabase para este paso). Probé toda la lógica (encolar una venta, el aviso de pendiente, la barra de conexión, la sincronización automática al reconectar) con datos de prueba. Lo único que no pude probar yo mismo es el caso 100% real (una tablet tuya, en modo avión, vendiendo) — si en algún momento querés confirmarlo con tus propios ojos: abrí la app, poné la tablet en modo avión, hacé una venta (se imprime igual, con el aviso), volvé a activar internet, y en unos segundos debería desaparecer el aviso de pendiente solo.
 
 ## Requisito para correr el proyecto: Node.js
 

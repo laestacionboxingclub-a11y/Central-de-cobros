@@ -5,6 +5,9 @@ import { Comprobante, type VentaConfirmada } from './Comprobante'
 import { ImprimiendoTicket } from './ImprimiendoTicket'
 import { TecladoCantidad } from './TecladoCantidad'
 import { siguienteNumeroComprobante, type CajaSeleccionada } from './localCaja'
+import { encolarVenta, guardarCatalogo, leerCatalogoGuardado } from '../offline/almacenLocal'
+import { esErrorDeRed } from '../offline/sincronizar'
+import { useSincronizacion } from '../offline/useSincronizacion'
 
 interface LineaCarrito {
   producto: Producto
@@ -28,6 +31,7 @@ export function PuntoDeVenta({
 }) {
   const [productos, setProductos] = useState<Producto[] | null>(null)
   const [errorCarga, setErrorCarga] = useState<string | null>(null)
+  const [catalogoGuardadoEn, setCatalogoGuardadoEn] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [carrito, setCarrito] = useState<LineaCarrito[]>([])
   const [productoEnEdicion, setProductoEnEdicion] = useState<Producto | null>(null)
@@ -38,10 +42,24 @@ export function PuntoDeVenta({
   const [ventaPendiente, setVentaPendiente] = useState<VentaConfirmada | null>(null)
   const [ventaConfirmada, setVentaConfirmada] = useState<VentaConfirmada | null>(null)
 
+  const { enLinea, pendientes, sincronizando, sincronizarAhora, actualizarPendientes } = useSincronizacion()
+
   useEffect(() => {
     fetchProductos(tenant.id)
-      .then(setProductos)
-      .catch(() => setErrorCarga('No se pudieron cargar los productos.'))
+      .then((data) => {
+        setProductos(data)
+        setCatalogoGuardadoEn(null)
+        guardarCatalogo(tenant.id, data)
+      })
+      .catch(() => {
+        const cache = leerCatalogoGuardado(tenant.id)
+        if (cache) {
+          setProductos(cache.productos)
+          setCatalogoGuardadoEn(cache.guardadoEn)
+        } else {
+          setErrorCarga('No se pudieron cargar los productos.')
+        }
+      })
   }, [tenant.id])
 
   const productosFiltrados = useMemo(() => {
@@ -83,53 +101,63 @@ export function PuntoDeVenta({
     if (carrito.length === 0 || !metodoPago) return
     setCobrando(true)
     setErrorCobro(null)
-    try {
-      const ventaId = crypto.randomUUID()
-      const ahora = new Date().toISOString()
-      const numero = siguienteNumeroComprobante(caja.id, caja.nombre)
 
-      const venta = {
-        id: ventaId,
-        tenant_id: tenant.id,
-        caja_id: caja.id,
-        cajero_id: perfil.id,
-        numero_comprobante: numero,
-        metodo_pago: metodoPago,
-        total: Number(total.toFixed(2)),
-        estado: 'completada' as const,
-        creada_en: ahora
-      }
-      const items = carrito.map((l) => ({
-        id: crypto.randomUUID(),
-        venta_id: ventaId,
-        producto_id: l.producto.id,
-        cantidad: l.cantidad,
-        precio_unitario: l.producto.precio,
-        subtotal: Number((l.cantidad * l.producto.precio).toFixed(2))
-      }))
-      const movimientos = carrito.map((l) => ({
-        id: crypto.randomUUID(),
-        tenant_id: tenant.id,
-        producto_id: l.producto.id,
-        cantidad: -l.cantidad,
-        tipo: 'venta' as const,
-        venta_id: ventaId,
-        caja_id: caja.id,
-        creado_por: perfil.id,
-        creado_en: ahora
-      }))
+    const ventaId = crypto.randomUUID()
+    const ahora = new Date().toISOString()
+    const numero = siguienteNumeroComprobante(caja.id, caja.nombre)
 
-      await registrarVenta({ venta, items, movimientos })
-
-      setVentaPendiente({ numero, items: carrito, total, metodoPago, fecha: ahora })
-      setImprimiendo(true)
-      setCarrito([])
-      setMetodoPago(null)
-    } catch {
-      setErrorCobro('No se pudo registrar la venta. Intentá de nuevo.')
-    } finally {
-      setCobrando(false)
+    const venta = {
+      id: ventaId,
+      tenant_id: tenant.id,
+      caja_id: caja.id,
+      cajero_id: perfil.id,
+      numero_comprobante: numero,
+      metodo_pago: metodoPago,
+      total: Number(total.toFixed(2)),
+      estado: 'completada' as const,
+      creada_en: ahora
     }
+    const items = carrito.map((l) => ({
+      id: crypto.randomUUID(),
+      venta_id: ventaId,
+      producto_id: l.producto.id,
+      cantidad: l.cantidad,
+      precio_unitario: l.producto.precio,
+      subtotal: Number((l.cantidad * l.producto.precio).toFixed(2))
+    }))
+    const movimientos = carrito.map((l) => ({
+      id: crypto.randomUUID(),
+      tenant_id: tenant.id,
+      producto_id: l.producto.id,
+      cantidad: -l.cantidad,
+      tipo: 'venta' as const,
+      venta_id: ventaId,
+      caja_id: caja.id,
+      creado_por: perfil.id,
+      creado_en: ahora
+    }))
+
+    let pendienteSync = false
+    try {
+      await registrarVenta({ venta, items, movimientos })
+    } catch (error) {
+      if (!esErrorDeRed(error)) {
+        setErrorCobro('No se pudo registrar la venta. Intentá de nuevo.')
+        setCobrando(false)
+        return
+      }
+      // Sin conexión: la venta ya pasó (el cliente ya pagó), así que la
+      // guardamos en la tablet e imprimimos igual. Se sincroniza sola después.
+      encolarVenta({ venta, items, movimientos })
+      actualizarPendientes()
+      pendienteSync = true
+    }
+
+    setVentaPendiente({ numero, items: carrito, total, metodoPago, fecha: ahora, pendienteSync })
+    setImprimiendo(true)
+    setCarrito([])
+    setMetodoPago(null)
+    setCobrando(false)
   }
 
   if (imprimiendo) {
@@ -170,6 +198,24 @@ export function PuntoDeVenta({
         </div>
       </header>
 
+      <div className={`pos-conexion no-imprimir ${enLinea ? 'en-linea' : 'sin-linea'}`}>
+        <span className="pos-conexion-punto" />
+        {enLinea ? 'En línea' : 'Sin conexión'}
+        {pendientes > 0 && (
+          <>
+            {' · '}
+            {sincronizando
+              ? 'sincronizando...'
+              : `${pendientes} venta${pendientes === 1 ? '' : 's'} pendiente${pendientes === 1 ? '' : 's'} de sincronizar`}
+            {enLinea && !sincronizando && (
+              <button className="link-btn pos-conexion-btn" onClick={sincronizarAhora}>
+                Sincronizar ahora
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
       <section className="pos-catalogo no-imprimir">
         <input
           type="text"
@@ -179,6 +225,12 @@ export function PuntoDeVenta({
           className="pos-buscador"
         />
         {errorCarga && <p className="warn">{errorCarga}</p>}
+        {catalogoGuardadoEn && (
+          <p className="app-status">
+            Mostrando el catálogo guardado (sin conexión) · actualizado{' '}
+            {new Date(catalogoGuardadoEn).toLocaleString('es-AR')}
+          </p>
+        )}
         {productos === null && !errorCarga && <p className="app-status">Cargando productos...</p>}
         {productos !== null && productosFiltrados.length === 0 && (
           <p className="app-status">No hay productos cargados todavía.</p>

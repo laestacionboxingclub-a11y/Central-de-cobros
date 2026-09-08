@@ -8,6 +8,7 @@ export interface VentaConfirmada {
   total: number
   metodoPago: MetodoPago
   fecha: string
+  pendienteSync: boolean
 }
 
 export function Comprobante({
@@ -43,6 +44,12 @@ export function Comprobante({
         <p className="comprobante-total">Total: ${venta.total.toFixed(2)}</p>
         <p>Pago: {ETIQUETA_METODO[venta.metodoPago]}</p>
       </div>
+
+      {venta.pendienteSync && (
+        <p className="no-imprimir warn">
+          ⚠ Guardada en la tablet — se va a sincronizar sola apenas vuelva la conexión.
+        </p>
+      )}
 
       <div className="no-imprimir comprobante-acciones">
         <button onClick={() => window.print()}>Imprimir</button>

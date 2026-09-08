@@ -10,6 +10,7 @@ import {
   type Perfil,
   type Tenant
 } from '@cdc/shared'
+import { guardarPerfilCache, leerPerfilCache } from '../offline/almacenLocal'
 
 interface AuthState {
   loading: boolean
@@ -55,7 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         const tenant = perfil.tenant_id ? await fetchTenant(perfil.tenant_id) : null
         setState({ loading: false, session, perfil, tenant, error: null })
+        guardarPerfilCache(session.user.id, perfil, tenant)
       } catch {
+        // Sin conexión: si esta tablet ya inició sesión antes, seguimos con
+        // el último perfil/tenant que se guardó localmente en vez de trabarnos.
+        const cache = leerPerfilCache(session.user.id)
+        if (cache) {
+          setState({ loading: false, session, perfil: cache.perfil, tenant: cache.tenant, error: null })
+          return
+        }
         setState({
           loading: false,
           session,
