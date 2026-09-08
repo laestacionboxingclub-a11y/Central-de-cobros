@@ -1,5 +1,5 @@
 import { supabase } from './supabase/client'
-import type { Gasto, MovimientoStock, Producto, StockActual, Venta, VentaItem } from './types'
+import type { Gasto, MovimientoStock, Perfil, Producto, StockActual, Venta, VentaItem } from './types'
 
 // A diferencia de fetchProductos (pos.ts), esta trae también los inactivos:
 // el dueño necesita verlos para poder reactivarlos.
@@ -106,6 +106,14 @@ export async function fetchVentasEntre(tenantId: string, desdeISO: string, hasta
 export async function fetchItemsDeVentas(ventaIds: string[]): Promise<VentaItem[]> {
   if (ventaIds.length === 0) return []
   const { data, error } = await supabase.from('venta_items').select('*').in('venta_id', ventaIds)
+  if (error) throw error
+  return data ?? []
+}
+
+// Los cajeros/dueños de este tenant, para poder mostrar nombres en vez de
+// ids (ej. "quién vendió más") en los reportes.
+export async function fetchPerfilesDeTenant(tenantId: string): Promise<Perfil[]> {
+  const { data, error } = await supabase.from('perfiles').select('*').eq('tenant_id', tenantId).order('nombre')
   if (error) throw error
   return data ?? []
 }

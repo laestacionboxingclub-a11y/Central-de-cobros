@@ -129,7 +129,10 @@ Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tie
 - **Gastos**: cargar gastos (fecha, categoría, descripción, monto) y ver el historial.
 - **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con períodos rápidos (hoy / esta semana / este mes) o un rango de fechas a elección. Además:
   - **Por caja**: cuánto vendió cada caja en el período, y cuánto efectivo acumuló (para el arqueo).
+  - **Por cajero**: cuánto vendió cada persona.
   - **Productos más vendidos**: top 10 por cantidad vendida.
+  - **Gráfico de ventas por día**: un vistazo rápido de cómo viene el período.
+  - **Comparación con el período anterior**: "▲ 17% vs. período anterior" al lado del total vendido (mismo largo de período, inmediatamente antes).
   - **Descargar CSV**: baja todo el reporte del período elegido en un archivo para abrir en Excel/Sheets.
 
 Como la seguridad de la base ya quedó resuelta en el Paso 2 (cada dueño solo puede tocar los datos de su propia verdulería), esta pantalla no necesitó ninguna migración nueva de Supabase.

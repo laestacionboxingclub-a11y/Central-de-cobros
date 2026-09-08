@@ -3,11 +3,13 @@ import {
   fetchCajas,
   fetchGastos,
   fetchItemsDeVentas,
+  fetchPerfilesDeTenant,
   fetchTodosLosProductos,
   fetchVentasEntre,
   type Caja,
   type Gasto,
   type MetodoPago,
+  type Perfil,
   type Producto,
   type Tenant,
   type Venta,
@@ -70,7 +72,9 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [cajas, setCajas] = useState<Caja[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
+  const [perfiles, setPerfiles] = useState<Perfil[]>([])
   const [items, setItems] = useState<VentaItem[]>([])
+  const [totalAnterior, setTotalAnterior] = useState<number | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -87,24 +91,37 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
     return { desde, hasta, desdeYMD: fechaLocalYMD(desde), hastaYMD: fechaLocalYMD(hasta) }
   }, [periodo, desdeInput, hastaInput])
 
+  // Mismo largo de período, inmediatamente antes, para poder comparar
+  // ("vendiste 12% más que el período anterior").
+  const { desdeAnterior, hastaAnterior } = useMemo(() => {
+    const duracion = hasta.getTime() - desde.getTime()
+    const hastaAnt = new Date(desde.getTime() - 1)
+    const desdeAnt = new Date(hastaAnt.getTime() - duracion)
+    return { desdeAnterior: desdeAnt, hastaAnterior: hastaAnt }
+  }, [desde, hasta])
+
   useEffect(() => {
     let cancelado = false
     setCargando(true)
     setError(null)
     Promise.all([
       fetchVentasEntre(tenant.id, desde.toISOString(), hasta.toISOString()),
+      fetchVentasEntre(tenant.id, desdeAnterior.toISOString(), hastaAnterior.toISOString()),
       fetchGastos(tenant.id),
       fetchCajas(tenant.id),
-      fetchTodosLosProductos(tenant.id)
+      fetchTodosLosProductos(tenant.id),
+      fetchPerfilesDeTenant(tenant.id)
     ])
-      .then(async ([listaVentas, listaGastos, listaCajas, listaProductos]) => {
+      .then(async ([listaVentas, ventasAnteriores, listaGastos, listaCajas, listaProductos, listaPerfiles]) => {
         const completadas = listaVentas.filter((v) => v.estado === 'completada')
         const listaItems = await fetchItemsDeVentas(completadas.map((v) => v.id))
         if (cancelado) return
         setVentas(completadas)
+        setTotalAnterior(ventasAnteriores.filter((v) => v.estado === 'completada').reduce((acc, v) => acc + v.total, 0))
         setGastos(listaGastos.filter((g) => g.fecha >= desdeYMD && g.fecha <= hastaYMD))
         setCajas(listaCajas)
         setProductos(listaProductos)
+        setPerfiles(listaPerfiles)
         setItems(listaItems)
       })
       .catch(() => {
@@ -157,6 +174,37 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
       .slice(0, 10)
   }, [items, productos])
 
+  const variacion = useMemo(() => {
+    if (totalAnterior === null || totalAnterior === 0) return null
+    return ((totales.totalVentas - totalAnterior) / totalAnterior) * 100
+  }, [totales.totalVentas, totalAnterior])
+
+  const porDia = useMemo(() => {
+    const mapa = new Map<string, number>()
+    for (const v of ventas) {
+      const clave = fechaLocalYMD(new Date(v.creada_en))
+      mapa.set(clave, (mapa.get(clave) ?? 0) + v.total)
+    }
+    return [...mapa.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [ventas])
+
+  const porCajero = useMemo(() => {
+    const mapa = new Map<string, { ventas: number; total: number }>()
+    for (const v of ventas) {
+      const actual = mapa.get(v.cajero_id) ?? { ventas: 0, total: 0 }
+      actual.ventas += 1
+      actual.total += v.total
+      mapa.set(v.cajero_id, actual)
+    }
+    return [...mapa.entries()]
+      .map(([cajeroId, datos]) => ({
+        id: cajeroId,
+        nombre: perfiles.find((p) => p.id === cajeroId)?.nombre ?? 'Cajero eliminado',
+        ...datos
+      }))
+      .sort((a, b) => b.total - a.total)
+  }, [ventas, perfiles])
+
   function descargarCSV() {
     const filas: string[] = []
     filas.push(csv('Central de Cobros - Reporte'))
@@ -181,6 +229,20 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
     filas.push([csv('Producto'), csv('Cantidad vendida'), csv('Monto')].join(','))
     for (const f of masVendidos) {
       filas.push([csv(f.producto.nombre), f.cantidad, f.monto.toFixed(2)].join(','))
+    }
+    filas.push('')
+    filas.push([csv('Cajero'), csv('Ventas'), csv('Total vendido')].join(','))
+    for (const f of porCajero) {
+      filas.push([csv(f.nombre), f.ventas, f.total.toFixed(2)].join(','))
+    }
+    filas.push('')
+    filas.push([csv('Fecha'), csv('Total vendido')].join(','))
+    for (const [fecha, total] of porDia) {
+      filas.push([csv(fecha), total.toFixed(2)].join(','))
+    }
+    if (variacion !== null) {
+      filas.push('')
+      filas.push([csv('Variación vs. período anterior'), `${variacion.toFixed(1)}%`].join(','))
     }
 
     const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' })
@@ -231,6 +293,11 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
             <div className="panel-stat">
               <span className="panel-stat-etiqueta">Total vendido</span>
               <span className="panel-stat-valor">${totales.totalVentas.toFixed(2)}</span>
+              {variacion !== null && (
+                <span className={`panel-stat-variacion ${variacion >= 0 ? 'positiva' : 'negativa'}`}>
+                  {variacion >= 0 ? '▲' : '▼'} {Math.abs(variacion).toFixed(0)}% vs. período anterior
+                </span>
+              )}
             </div>
             <div className="panel-stat">
               <span className="panel-stat-etiqueta">Ventas</span>
@@ -245,6 +312,25 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
               <span className="panel-stat-valor">${totales.resultado.toFixed(2)}</span>
             </div>
           </div>
+
+          {porDia.length > 1 && (
+            <>
+              <h3>Ventas por día</h3>
+              <div className="reportes-chart-wrap">
+                <div className="reportes-chart">
+                  {(() => {
+                    const maxDia = Math.max(1, ...porDia.map(([, t]) => t))
+                    return porDia.map(([fecha, total]) => (
+                      <div key={fecha} className="reportes-barra-col" title={`${fecha}: $${total.toFixed(2)}`}>
+                        <div className="reportes-barra" style={{ height: `${(total / maxDia) * 100}%` }} />
+                        <span className="reportes-barra-etiqueta">{fecha.slice(5)}</span>
+                      </div>
+                    ))
+                  })()}
+                </div>
+              </div>
+            </>
+          )}
 
           <h3>Por método de pago</h3>
           <table className="panel-tabla">
@@ -278,6 +364,30 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
                     <td>{f.ventas}</td>
                     <td>${f.total.toFixed(2)}</td>
                     <td>${f.efectivo.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <h3>Por cajero</h3>
+          {porCajero.length === 0 ? (
+            <p className="app-status">No hay ventas en este período.</p>
+          ) : (
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>Cajero</th>
+                  <th>Ventas</th>
+                  <th>Total vendido</th>
+                </tr>
+              </thead>
+              <tbody>
+                {porCajero.map((f) => (
+                  <tr key={f.id}>
+                    <td>{f.nombre}</td>
+                    <td>{f.ventas}</td>
+                    <td>${f.total.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
