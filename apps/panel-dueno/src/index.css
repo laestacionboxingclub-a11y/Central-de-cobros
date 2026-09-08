@@ -70,3 +70,245 @@ body {
   opacity: 0.6;
   cursor: default;
 }
+
+/* ---- panel del dueño ---- */
+
+.panel-layout {
+  min-height: 100vh;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  background: #2563eb;
+  color: #fff;
+}
+
+.panel-header .link-btn {
+  color: #fff;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.link-btn-oscuro {
+  background: none;
+  border: none;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  margin-right: 0.6rem;
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.75rem 1.25rem 0;
+  flex-wrap: wrap;
+}
+
+.panel-tabs-secundarias {
+  padding: 0 0 1rem;
+}
+
+.panel-tab {
+  padding: 0.55rem 1rem;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #eceef0;
+  color: #444;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.panel-tabs-secundarias .panel-tab {
+  border-radius: 999px;
+  border-bottom: 1px solid #ccc;
+}
+
+.panel-tab.activo {
+  background: #fff;
+  color: #2563eb;
+  font-weight: 600;
+  border-color: #2563eb;
+}
+
+.panel-contenido {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 0 8px 8px 8px;
+  margin: 0 1.25rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.panel-seccion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.panel-seccion-header h2 {
+  margin: 0;
+}
+
+.btn-primario {
+  padding: 0.6rem 1.1rem;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-secundario {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.alerta-stock {
+  background: #fdf1e3;
+  color: #92400e;
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 1.1rem;
+  margin-bottom: 1.25rem;
+  max-width: 420px;
+}
+
+.panel-form-ancho {
+  max-width: 480px;
+}
+
+.panel-form h3 {
+  margin: 0 0 0.25rem;
+}
+
+.panel-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #444;
+  font-weight: 600;
+}
+
+.panel-form input,
+.panel-form select {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-weight: 400;
+  font-family: inherit;
+}
+
+.panel-form-acciones {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.panel-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.panel-tabla th,
+.panel-tabla td {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.panel-tabla th {
+  color: #777;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fila-inactiva {
+  opacity: 0.5;
+}
+
+.texto-alerta {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.panel-tabla-acciones {
+  white-space: nowrap;
+}
+
+.panel-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.panel-stat {
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.panel-stat-etiqueta {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.panel-stat-valor {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.panel-stat-negativo .panel-stat-valor {
+  color: #b45309;
+}

@@ -2,7 +2,7 @@
 
 Sistema de punto de venta multi-tenant para verdulerías. Este repo contiene las 3 apps del sistema y el código compartido entre ellas.
 
-**Estado actual: Paso 5 (modo offline).** La app de Caja ya puede seguir vendiendo aunque se corte el internet, y sincroniza sola cuando vuelve. Todavía no hay panel del dueño para cargar stock/precios (Paso 6).
+**Estado actual: Paso 6 (panel del dueño).** Ya se pueden cargar productos, stock y gastos, y ver reportes, todo desde una pantalla — sin tocar SQL a mano. Todavía falta el panel central para vos (Paso 7).
 
 ## Estructura del proyecto
 
@@ -106,7 +106,7 @@ Como con el Paso 2, para aplicar esto a tu proyecto hay que correr ese archivo e
 
 ### Para probar una venta real
 
-Como todavía no existe el panel del dueño (Paso 6) para cargar productos, hace falta cargar unos productos de prueba a mano por SQL Editor, y tener un usuario con rol `dueno` o `cajero` (tu usuario actual es `superadmin`, que no tiene acceso a la app de Caja a propósito). Cuando quieras hacer esa prueba, avisame y te paso el SQL con los datos de ejemplo.
+Hace falta un usuario con rol `dueno` o `cajero` (tu usuario actual es `superadmin`, que no tiene acceso ni a la app de Caja ni al Panel del Dueño a propósito). Con ese usuario podés cargar productos vos mismo desde el Panel del Dueño (Paso 6) en vez de por SQL.
 
 ## Modo offline (Paso 5)
 
@@ -119,6 +119,17 @@ Si a la tablet se le corta el internet en medio del día, la app de Caja sigue f
 - **Sin duplicados**: como cada venta ya se identifica con un código único generado en la propia tablet (ver Paso 2), sincronizar una venta más de una vez no genera un cobro doble — la base de datos la reconoce y la descarta.
 
 Esto es puramente del lado de la app (no hace falta correr nada nuevo en Supabase para este paso). Probé toda la lógica (encolar una venta, el aviso de pendiente, la barra de conexión, la sincronización automática al reconectar) con datos de prueba. Lo único que no pude probar yo mismo es el caso 100% real (una tablet tuya, en modo avión, vendiendo) — si en algún momento querés confirmarlo con tus propios ojos: abrí la app, poné la tablet en modo avión, hacé una venta (se imprime igual, con el aviso), volvé a activar internet, y en unos segundos debería desaparecer el aviso de pendiente solo.
+
+## Panel del dueño (Paso 6)
+
+Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tiene 4 pestañas:
+
+- **Productos**: crear, editar, activar/desactivar. Cada uno con nombre, precio, unidad (kg, unidad, etc.), foto (por URL, por ahora) y un "stock mínimo" opcional. Si el stock actual de un producto activo cae por debajo de ese mínimo, aparece un aviso arriba de la lista — esa es la alerta de stock bajo.
+- **Stock**: cargar mercadería nueva, registrar una merma/pérdida, o hacer un ajuste manual. Se ve el stock actual de cada producto antes de tocarlo.
+- **Gastos**: cargar gastos (fecha, categoría, descripción, monto) y ver el historial.
+- **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con tres períodos rápidos (hoy / esta semana / este mes).
+
+Como la seguridad de la base ya quedó resuelta en el Paso 2 (cada dueño solo puede tocar los datos de su propia verdulería), esta pantalla no necesitó ninguna migración nueva de Supabase.
 
 ## Requisito para correr el proyecto: Node.js
 

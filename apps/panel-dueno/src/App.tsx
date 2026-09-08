@@ -1,6 +1,7 @@
 import { isSupabaseConfigured } from '@cdc/shared'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { LoginPage } from './auth/LoginPage'
+import { PanelDueno } from './panel/PanelDueno'
 
 const ROLES_PERMITIDOS = ['dueno']
 const ETIQUETA_APP = 'Panel del Dueño'
@@ -50,17 +51,24 @@ function Contenido() {
     )
   }
 
-  return (
-    <main className="app-shell">
-      <h1>Central de Cobros</h1>
-      <p className="app-label">{ETIQUETA_APP}</p>
-      <p className="app-status">
-        Sesión iniciada como {perfil?.nombre} ({perfil?.rol})
-      </p>
-      <p className="app-status">Todavía sin stock, precios ni reportes (Paso 6).</p>
-      <button onClick={logout}>Cerrar sesión</button>
-    </main>
-  )
+  if (!perfil) {
+    return (
+      <main className="app-shell">
+        <p className="app-status">Cargando...</p>
+      </main>
+    )
+  }
+
+  if (!tenant) {
+    return (
+      <main className="app-shell">
+        <p className="warn">No se encontró tu verdulería. Contactá al soporte.</p>
+        <button onClick={logout}>Cerrar sesión</button>
+      </main>
+    )
+  }
+
+  return <PanelDueno perfil={perfil} tenant={tenant} onLogout={logout} />
 }
 
 function App() {
