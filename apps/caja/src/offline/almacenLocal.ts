@@ -1,7 +1,16 @@
 // Todo lo que la tablet necesita recordar por su cuenta para poder seguir
 // cobrando sin internet: el último catálogo visto, la sesión del cajero,
 // y las ventas que todavía no se pudieron mandar a Supabase.
-import type { NuevaVenta, NuevoMovimientoStock, NuevoVentaItem, Perfil, Producto, Tenant } from '@cdc/shared'
+import type {
+  Cliente,
+  NuevaVenta,
+  NuevoCargoCuentaCorriente,
+  NuevoMovimientoStock,
+  NuevoVentaItem,
+  Perfil,
+  Producto,
+  Tenant
+} from '@cdc/shared'
 
 export interface VentaPendiente {
   venta: NuevaVenta
@@ -11,8 +20,10 @@ export interface VentaPendiente {
 
 const CATALOGO_KEY = (tenantId: string) => `cdc_catalogo_${tenantId}`
 const STOCK_KEY = (tenantId: string) => `cdc_stock_${tenantId}`
+const CLIENTES_KEY = (tenantId: string) => `cdc_clientes_${tenantId}`
 const PERFIL_KEY = (userId: string) => `cdc_perfil_${userId}`
 const COLA_KEY = 'cdc_cola_ventas'
+const COLA_CARGOS_CC_KEY = 'cdc_cola_cargos_cc'
 
 // ---- catálogo ----
 
@@ -41,6 +52,22 @@ export function guardarStock(tenantId: string, stock: Record<string, number>) {
 
 export function leerStockGuardado(tenantId: string): Record<string, number> | null {
   const raw = localStorage.getItem(STOCK_KEY(tenantId))
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+// ---- clientes (para poder vender a cuenta corriente sin depender de la red) ----
+
+export function guardarClientes(tenantId: string, clientes: Cliente[]) {
+  localStorage.setItem(CLIENTES_KEY(tenantId), JSON.stringify(clientes))
+}
+
+export function leerClientesGuardados(tenantId: string): Cliente[] | null {
+  const raw = localStorage.getItem(CLIENTES_KEY(tenantId))
   if (!raw) return null
   try {
     return JSON.parse(raw)
@@ -95,6 +122,38 @@ export function quitarDeCola(ventaId: string) {
   guardarCola(leerCola().filter((p) => p.venta.id !== ventaId))
 }
 
+// ---- cola de cargos a cuenta corriente pendientes de sincronizar ----
+// Separada de la cola de ventas: la venta en sí ya se guarda (o encola) igual
+// que siempre: esto es solo el cargo a la cuenta del cliente.
+
+function leerColaCargosCC(): NuevoCargoCuentaCorriente[] {
+  const raw = localStorage.getItem(COLA_CARGOS_CC_KEY)
+  if (!raw) return []
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+function guardarColaCargosCC(cola: NuevoCargoCuentaCorriente[]) {
+  localStorage.setItem(COLA_CARGOS_CC_KEY, JSON.stringify(cola))
+}
+
+export function encolarCargoCuentaCorriente(cargo: NuevoCargoCuentaCorriente) {
+  const cola = leerColaCargosCC()
+  cola.push(cargo)
+  guardarColaCargosCC(cola)
+}
+
+export function obtenerColaCargosCC(): NuevoCargoCuentaCorriente[] {
+  return leerColaCargosCC()
+}
+
+export function quitarDeColaCargosCC(cargoId: string) {
+  guardarColaCargosCC(leerColaCargosCC().filter((c) => c.id !== cargoId))
+}
+
 export function cantidadPendientes(): number {
-  return leerCola().length
+  return leerCola().length + leerColaCargosCC().length
 }

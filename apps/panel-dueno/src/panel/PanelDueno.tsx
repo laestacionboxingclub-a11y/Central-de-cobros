@@ -2,14 +2,16 @@ import { useState } from 'react'
 import type { Perfil, Tenant } from '@cdc/shared'
 import { Productos } from './Productos'
 import { Stock } from './Stock'
+import { Clientes } from './Clientes'
 import { Gastos } from './Gastos'
 import { Reportes } from './Reportes'
 
-type Tab = 'productos' | 'stock' | 'gastos' | 'reportes'
+type Tab = 'productos' | 'stock' | 'clientes' | 'gastos' | 'reportes'
 
 const TABS: { id: Tab; etiqueta: string }[] = [
   { id: 'productos', etiqueta: 'Productos' },
   { id: 'stock', etiqueta: 'Stock' },
+  { id: 'clientes', etiqueta: 'Clientes' },
   { id: 'gastos', etiqueta: 'Gastos' },
   { id: 'reportes', etiqueta: 'Reportes' }
 ]
@@ -51,6 +53,7 @@ export function PanelDueno({
       <main className="panel-contenido">
         {tab === 'productos' && <Productos tenant={tenant} />}
         {tab === 'stock' && <Stock tenant={tenant} perfil={perfil} />}
+        {tab === 'clientes' && <Clientes tenant={tenant} perfil={perfil} />}
         {tab === 'gastos' && <Gastos tenant={tenant} perfil={perfil} />}
         {tab === 'reportes' && <Reportes tenant={tenant} />}
       </main>

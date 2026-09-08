@@ -1,5 +1,5 @@
-import { registrarVenta } from '@cdc/shared'
-import { obtenerCola, quitarDeCola } from './almacenLocal'
+import { registrarCargoCuentaCorriente, registrarVenta } from '@cdc/shared'
+import { obtenerCola, obtenerColaCargosCC, quitarDeCola, quitarDeColaCargosCC } from './almacenLocal'
 
 // Heurística para distinguir "no hay internet ahora" de un error real: si el
 // fetch nunca llegó a un servidor, el navegador tira un TypeError (o similar).
@@ -10,9 +10,9 @@ export function esErrorDeRed(error: unknown): boolean {
   return mensaje.includes('fetch') || mensaje.includes('network')
 }
 
-// 23505 = unique_violation en Postgres: esta venta ya se había guardado en un
+// 23505 = unique_violation en Postgres: esto ya se había guardado en un
 // intento anterior (el id lo genera la tablet, así que reintentar es seguro).
-function yaEstabaSincronizada(error: unknown): boolean {
+function yaEstabaSincronizado(error: unknown): boolean {
   return (error as { code?: string } | null)?.code === '23505'
 }
 
@@ -26,7 +26,7 @@ export async function sincronizarPendientes(): Promise<{ sincronizadas: number; 
       quitarDeCola(pendiente.venta.id)
       sincronizadas++
     } catch (error) {
-      if (yaEstabaSincronizada(error)) {
+      if (yaEstabaSincronizado(error)) {
         quitarDeCola(pendiente.venta.id)
         sincronizadas++
         continue
@@ -37,5 +37,21 @@ export async function sincronizarPendientes(): Promise<{ sincronizadas: number; 
     }
   }
 
-  return { sincronizadas, quedanPendientes: obtenerCola().length }
+  const colaCargos = obtenerColaCargosCC()
+  for (const cargo of colaCargos) {
+    try {
+      await registrarCargoCuentaCorriente(cargo)
+      quitarDeColaCargosCC(cargo.id)
+      sincronizadas++
+    } catch (error) {
+      if (yaEstabaSincronizado(error)) {
+        quitarDeColaCargosCC(cargo.id)
+        sincronizadas++
+        continue
+      }
+      break
+    }
+  }
+
+  return { sincronizadas, quedanPendientes: obtenerCola().length + obtenerColaCargosCC().length }
 }

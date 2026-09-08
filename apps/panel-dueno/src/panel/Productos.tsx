@@ -187,6 +187,9 @@ export function Productos({ tenant }: { tenant: Tenant }) {
               <option value="kg" />
               <option value="unidad" />
               <option value="docena" />
+              <option value="cajón" />
+              <option value="bulto" />
+              <option value="saco" />
               <option value="bolsa" />
             </datalist>
           </label>

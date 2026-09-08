@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  crearCliente,
+  fetchClientes,
   fetchProductos,
   fetchStockActual,
+  registrarCargoCuentaCorriente,
   registrarVenta,
+  type Cliente,
   type MetodoPago,
   type Perfil,
   type Producto,
@@ -13,7 +17,16 @@ import { Comprobante, type VentaConfirmada } from './Comprobante'
 import { ImprimiendoTicket } from './ImprimiendoTicket'
 import { TecladoCantidad } from './TecladoCantidad'
 import { siguienteNumeroComprobante, type CajaSeleccionada } from './localCaja'
-import { encolarVenta, guardarCatalogo, guardarStock, leerCatalogoGuardado, leerStockGuardado } from '../offline/almacenLocal'
+import {
+  encolarCargoCuentaCorriente,
+  encolarVenta,
+  guardarCatalogo,
+  guardarClientes,
+  guardarStock,
+  leerCatalogoGuardado,
+  leerClientesGuardados,
+  leerStockGuardado
+} from '../offline/almacenLocal'
 import { esErrorDeRed } from '../offline/sincronizar'
 import { useSincronizacion } from '../offline/useSincronizacion'
 
@@ -22,7 +35,7 @@ interface LineaCarrito {
   cantidad: number
 }
 
-const METODOS: MetodoPago[] = ['efectivo', 'posnet', 'transferencia']
+const METODOS: MetodoPago[] = ['efectivo', 'posnet', 'transferencia', 'cuenta_corriente']
 
 export function PuntoDeVenta({
   perfil,
@@ -45,6 +58,12 @@ export function PuntoDeVenta({
   const [carrito, setCarrito] = useState<LineaCarrito[]>([])
   const [productoEnEdicion, setProductoEnEdicion] = useState<Producto | null>(null)
   const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(null)
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clienteId, setClienteId] = useState('')
+  const [mostrarNuevoCliente, setMostrarNuevoCliente] = useState(false)
+  const [nuevoClienteNombre, setNuevoClienteNombre] = useState('')
+  const [nuevoClienteTelefono, setNuevoClienteTelefono] = useState('')
+  const [guardandoCliente, setGuardandoCliente] = useState(false)
   const [cobrando, setCobrando] = useState(false)
   const [imprimiendo, setImprimiendo] = useState(false)
   const [errorCobro, setErrorCobro] = useState<string | null>(null)
@@ -78,6 +97,16 @@ export function PuntoDeVenta({
       .catch(() => {
         const cache = leerStockGuardado(tenant.id)
         if (cache) setStock(cache)
+      })
+
+    fetchClientes(tenant.id)
+      .then((data) => {
+        setClientes(data)
+        guardarClientes(tenant.id, data)
+      })
+      .catch(() => {
+        const cache = leerClientesGuardados(tenant.id)
+        if (cache) setClientes(cache)
       })
   }, [tenant.id])
 
@@ -116,8 +145,36 @@ export function PuntoDeVenta({
     setCarrito((actual) => actual.filter((l) => l.producto.id !== productoId))
   }
 
+  async function crearClienteRapido() {
+    if (!nuevoClienteNombre.trim()) return
+    setGuardandoCliente(true)
+    setErrorCobro(null)
+    try {
+      const nuevo = await crearCliente({
+        tenant_id: tenant.id,
+        nombre: nuevoClienteNombre.trim(),
+        telefono: nuevoClienteTelefono.trim() || null
+      })
+      const actualizados = [...clientes, nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      setClientes(actualizados)
+      guardarClientes(tenant.id, actualizados)
+      setClienteId(nuevo.id)
+      setMostrarNuevoCliente(false)
+      setNuevoClienteNombre('')
+      setNuevoClienteTelefono('')
+    } catch {
+      setErrorCobro('No se pudo crear el cliente. Probá de nuevo (necesita conexión).')
+    } finally {
+      setGuardandoCliente(false)
+    }
+  }
+
   async function cobrar() {
     if (carrito.length === 0 || !metodoPago) return
+    if (metodoPago === 'cuenta_corriente' && !clienteId) {
+      setErrorCobro('Elegí a qué cliente se le carga la cuenta.')
+      return
+    }
     setCobrando(true)
     setErrorCobro(null)
 
@@ -172,6 +229,30 @@ export function PuntoDeVenta({
       pendienteSync = true
     }
 
+    const clienteDeLaVenta = metodoPago === 'cuenta_corriente' ? clientes.find((c) => c.id === clienteId) : undefined
+
+    if (metodoPago === 'cuenta_corriente' && clienteDeLaVenta) {
+      const cargo = {
+        id: crypto.randomUUID(),
+        tenant_id: tenant.id,
+        cliente_id: clienteDeLaVenta.id,
+        monto: Number(total.toFixed(2)),
+        venta_id: ventaId,
+        creado_por: perfil.id,
+        creado_en: ahora
+      }
+      try {
+        await registrarCargoCuentaCorriente(cargo)
+      } catch (error) {
+        // La venta ya está guardada (o encolada) — esto solo encola el
+        // cargo a la cuenta para que se sume solo apenas vuelva la conexión.
+        if (esErrorDeRed(error)) {
+          encolarCargoCuentaCorriente(cargo)
+          actualizarPendientes()
+        }
+      }
+    }
+
     // Descontamos el stock ya mismo en la pantalla (no esperamos a releer el
     // servidor): así, si el cajero encadena varias ventas seguidas del mismo
     // producto, cada una ve el stock ya actualizado por la anterior.
@@ -188,10 +269,19 @@ export function PuntoDeVenta({
       return nuevo
     })
 
-    setVentaPendiente({ numero, items: carrito, total, metodoPago, fecha: ahora, pendienteSync })
+    setVentaPendiente({
+      numero,
+      items: carrito,
+      total,
+      metodoPago,
+      fecha: ahora,
+      pendienteSync,
+      clienteNombre: clienteDeLaVenta?.nombre
+    })
     setImprimiendo(true)
     setCarrito([])
     setMetodoPago(null)
+    setClienteId('')
     setCobrando(false)
   }
 
@@ -244,7 +334,7 @@ export function PuntoDeVenta({
             {' · '}
             {sincronizando
               ? 'sincronizando...'
-              : `${pendientes} venta${pendientes === 1 ? '' : 's'} pendiente${pendientes === 1 ? '' : 's'} de sincronizar`}
+              : `${pendientes} movimiento${pendientes === 1 ? '' : 's'} pendiente${pendientes === 1 ? '' : 's'} de sincronizar`}
             {enLinea && !sincronizando && (
               <button className="link-btn pos-conexion-btn" onClick={sincronizarAhora}>
                 Sincronizar ahora
@@ -322,11 +412,68 @@ export function PuntoDeVenta({
           ))}
         </div>
 
+        {metodoPago === 'cuenta_corriente' && (
+          <div className="pos-cliente">
+            {!mostrarNuevoCliente ? (
+              <>
+                <select
+                  className="pos-cliente-select"
+                  value={clienteId}
+                  onChange={(e) => setClienteId(e.target.value)}
+                >
+                  <option value="">Elegí un cliente...</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="link-btn-oscuro" onClick={() => setMostrarNuevoCliente(true)}>
+                  + Cliente nuevo
+                </button>
+              </>
+            ) : (
+              <div className="pos-cliente-nuevo">
+                <input
+                  type="text"
+                  placeholder="Nombre del cliente"
+                  value={nuevoClienteNombre}
+                  onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                />
+                <input
+                  type="text"
+                  placeholder="Teléfono (opcional)"
+                  value={nuevoClienteTelefono}
+                  onChange={(e) => setNuevoClienteTelefono(e.target.value)}
+                />
+                <div className="pos-cliente-nuevo-acciones">
+                  <button type="button" className="link-btn-oscuro" onClick={() => setMostrarNuevoCliente(false)}>
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-cliente-guardar"
+                    disabled={guardandoCliente || !nuevoClienteNombre.trim()}
+                    onClick={crearClienteRapido}
+                  >
+                    {guardandoCliente ? 'Guardando...' : 'Guardar cliente'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {errorCobro && <p className="warn">{errorCobro}</p>}
 
         <button
           className="pos-cobrar-btn"
-          disabled={carrito.length === 0 || !metodoPago || cobrando}
+          disabled={
+            carrito.length === 0 ||
+            !metodoPago ||
+            cobrando ||
+            (metodoPago === 'cuenta_corriente' && !clienteId)
+          }
           onClick={cobrar}
         >
           {cobrando ? 'Cobrando...' : `Cobrar $${total.toFixed(2)}`}

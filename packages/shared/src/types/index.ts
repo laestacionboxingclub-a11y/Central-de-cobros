@@ -42,7 +42,7 @@ export interface Producto {
   updated_at: string
 }
 
-export type MetodoPago = 'efectivo' | 'posnet' | 'transferencia'
+export type MetodoPago = 'efectivo' | 'posnet' | 'transferencia' | 'cuenta_corriente'
 export type EstadoVenta = 'completada' | 'anulada'
 
 export interface Venta {
@@ -97,4 +97,33 @@ export interface Gasto {
   monto: number
   creado_por: string | null
   creado_en: string
+}
+
+export interface Cliente {
+  id: string
+  tenant_id: string
+  nombre: string
+  telefono: string | null
+  activo: boolean
+  created_at: string
+}
+
+export type TipoMovimientoCuentaCorriente = 'cargo' | 'pago'
+
+export interface MovimientoCuentaCorriente {
+  id: string
+  tenant_id: string
+  cliente_id: string
+  monto: number
+  tipo: TipoMovimientoCuentaCorriente
+  venta_id: string | null
+  descripcion: string | null
+  creado_por: string | null
+  creado_en: string
+}
+
+export interface CuentaCorrienteSaldo {
+  tenant_id: string
+  cliente_id: string
+  saldo: number
 }

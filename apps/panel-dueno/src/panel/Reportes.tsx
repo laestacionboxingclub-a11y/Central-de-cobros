@@ -25,12 +25,13 @@ const ETIQUETA_PERIODO: Record<Periodo, string> = {
   personalizado: 'Personalizado'
 }
 
-const METODOS: MetodoPago[] = ['efectivo', 'posnet', 'transferencia']
+const METODOS: MetodoPago[] = ['efectivo', 'posnet', 'transferencia', 'cuenta_corriente']
 
 const ETIQUETA_METODO: Record<MetodoPago, string> = {
   efectivo: 'Efectivo',
   posnet: 'Posnet',
-  transferencia: 'Transferencia'
+  transferencia: 'Transferencia',
+  cuenta_corriente: 'Cuenta corriente'
 }
 
 // YYYY-MM-DD en el huso horario local (no toISOString: eso convierte a UTC
@@ -140,7 +141,7 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
   const totales = useMemo(() => {
     const totalVentas = ventas.reduce((acc, v) => acc + v.total, 0)
     const totalGastos = gastos.reduce((acc, g) => acc + g.monto, 0)
-    const porMetodo: Record<MetodoPago, number> = { efectivo: 0, posnet: 0, transferencia: 0 }
+    const porMetodo: Record<MetodoPago, number> = { efectivo: 0, posnet: 0, transferencia: 0, cuenta_corriente: 0 }
     for (const v of ventas) porMetodo[v.metodo_pago] += v.total
     return { totalVentas, totalGastos, porMetodo, resultado: totalVentas - totalGastos }
   }, [ventas, gastos])
@@ -169,7 +170,7 @@ export function Reportes({ tenant }: { tenant: Tenant }) {
 
     const ventasCaja = ventas.filter((v) => v.caja_id === cajaSeleccionada)
     const total = ventasCaja.reduce((acc, v) => acc + v.total, 0)
-    const porMetodo: Record<MetodoPago, number> = { efectivo: 0, posnet: 0, transferencia: 0 }
+    const porMetodo: Record<MetodoPago, number> = { efectivo: 0, posnet: 0, transferencia: 0, cuenta_corriente: 0 }
     for (const v of ventasCaja) porMetodo[v.metodo_pago] += v.total
 
     const idsVenta = new Set(ventasCaja.map((v) => v.id))

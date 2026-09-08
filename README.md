@@ -122,10 +122,11 @@ Esto es puramente del lado de la app (no hace falta correr nada nuevo en Supabas
 
 ## Panel del dueño (Paso 6)
 
-Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tiene 4 pestañas:
+Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tiene 5 pestañas:
 
-- **Productos**: crear, editar, activar/desactivar. Cada uno con nombre, precio, unidad (kg, unidad, etc.), foto (por URL, por ahora) y un "stock mínimo" opcional. Si el stock actual de un producto activo cae por debajo de ese mínimo, aparece un aviso arriba de la lista — esa es la alerta de stock bajo. También se puede **ajustar el precio a varios productos a la vez**: se seleccionan con los checkboxes (o "Seleccionar todos") y se les aplica un porcentaje — positivo para subir, negativo para bajar — de una sola vez, en vez de entrar producto por producto.
+- **Productos**: crear, editar, activar/desactivar. Cada uno con nombre, precio, unidad (kg, unidad, cajón, bulto, saco, etc. — es texto libre, no una lista cerrada) y un "stock mínimo" opcional. Si el stock actual de un producto activo cae por debajo de ese mínimo, aparece un aviso arriba de la lista — esa es la alerta de stock bajo. También se puede **ajustar el precio a varios productos a la vez**: se seleccionan con los checkboxes (o "Seleccionar todos") y se les aplica un porcentaje — positivo para subir, negativo para bajar — de una sola vez, en vez de entrar producto por producto.
 - **Stock**: cargar mercadería nueva, registrar una merma/pérdida, o hacer un ajuste manual. Se ve el stock actual de cada producto antes de tocarlo.
+- **Clientes**: cuenta corriente. Se cargan los clientes habituales (nombre y teléfono opcional) y se ve cuánto debe cada uno. Al entrar a un cliente se ve su historial completo (cada venta a cuenta y cada pago) y se puede registrar un pago para descontarle el saldo. Ver también la sección "Cuenta corriente" más abajo.
 - **Gastos**: cargar gastos (fecha, categoría, descripción, monto) y ver el historial.
 - **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con períodos rápidos (hoy / esta semana / este mes) o un rango de fechas a elección. Además:
   - **Por caja**: elegís una caja específica (no es solo una lista) y ves su propio detalle — ventas, total, efectivo acumulado, gráfico por día, método de pago y productos más vendidos de esa caja en particular. También queda la vista "Todas" para comparar todas juntas de un vistazo.
@@ -134,6 +135,14 @@ Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tie
   - **Gráfico de ventas por día**: un vistazo rápido de cómo viene el período.
   - **Comparación con el período anterior**: "▲ 17% vs. período anterior" al lado del total vendido (mismo largo de período, inmediatamente antes).
   - **Descargar CSV**: baja todo el reporte del período elegido en un archivo para abrir en Excel/Sheets.
+
+### Cuenta corriente
+
+Pensado para el caso típico de un puesto mayorista: venderle a un comerciante conocido que paga después, no en el momento. En la app de Caja, "Cuenta corriente" es un método de pago más — al elegirlo, pide seleccionar a qué cliente se le carga (o crear uno nuevo ahí mismo, sin salir de la pantalla de cobro). La venta se registra igual que cualquier otra; además, se le suma un cargo a la cuenta de ese cliente. Si en ese momento no hay conexión, el cargo se guarda en la tablet y se sincroniza solo cuando vuelve — igual que ya pasa con las ventas.
+
+En el Panel del Dueño (pestaña **Clientes**) se ve cuánto debe cada uno, su historial completo de cargos y pagos, y se registran los pagos que van haciendo para descontarles el saldo.
+
+Corre sobre las mismas reglas que el resto del sistema: `clientes` y `cuenta_corriente_movimientos` (migración [`0006_cuenta_corriente.sql`](supabase/migrations/0006_cuenta_corriente.sql)) están aisladas por tenant con RLS, y el saldo se calcula sumando el historial de movimientos — nunca se guarda como un número que se pisa, mismo criterio que el stock.
 
 ### Alertas de stock bajo por email
 

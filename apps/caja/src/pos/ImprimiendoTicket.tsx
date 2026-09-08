@@ -45,6 +45,7 @@ export function ImprimiendoTicket({
           <hr className="ticket-linea" />
           <p className="ticket-total">Total: ${venta.total.toFixed(2)}</p>
           <p className="ticket-meta">Pago: {ETIQUETA_METODO[venta.metodoPago]}</p>
+          {venta.clienteNombre && <p className="ticket-meta">Cliente: {venta.clienteNombre}</p>}
         </div>
       </div>
       <p className="app-status">Imprimiendo comprobante...</p>
