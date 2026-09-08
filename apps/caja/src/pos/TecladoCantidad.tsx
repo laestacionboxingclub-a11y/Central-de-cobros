@@ -17,8 +17,9 @@ export function TecladoCantidad({
   producto: Producto
   cantidadInicial?: number
   // Cuánto queda de este producto según los movimientos de stock (Paso 2).
-  // No deja cargar más de esto en el carrito.
-  stockDisponible: number
+  // undefined = todavía no se cargó ningún movimiento de este producto (no
+  // hay dato, no es lo mismo que "hay 0"): en ese caso no se limita nada.
+  stockDisponible: number | undefined
   onConfirmar: (cantidad: number) => void
   onCancelar: () => void
 }) {
@@ -47,11 +48,14 @@ export function TecladoCantidad({
   }
 
   const cantidad = Number(valor)
-  const sinStock = stockDisponible <= 0
+  // Si todavía no hay ningún movimiento cargado para este producto no hay
+  // dato de stock (no es que haya 0), así que no se limita nada.
+  const hayControlDeStock = stockDisponible !== undefined
+  const sinStock = hayControlDeStock && stockDisponible <= 0
   const esValido = valor !== '' && cantidad > 0 && !sinStock
 
   function confirmar() {
-    if (cantidad > stockDisponible) {
+    if (hayControlDeStock && cantidad > stockDisponible) {
       setValor(String(stockDisponible))
       setAvisoStock(true)
       return
@@ -69,9 +73,11 @@ export function TecladoCantidad({
           <span className="teclado-unidad">{producto.unidad_medida}</span>
         </div>
 
-        <p className="app-status teclado-disponible">
-          Disponible: {stockDisponible} {producto.unidad_medida}
-        </p>
+        {hayControlDeStock && (
+          <p className="app-status teclado-disponible">
+            Disponible: {stockDisponible} {producto.unidad_medida}
+          </p>
+        )}
 
         {sinStock ? (
           <p className="warn teclado-aviso">No queda stock de este producto.</p>

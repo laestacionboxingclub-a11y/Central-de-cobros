@@ -178,7 +178,11 @@ export function PuntoDeVenta({
     setStock((actual) => {
       const nuevo = { ...actual }
       for (const l of carrito) {
-        nuevo[l.producto.id] = (nuevo[l.producto.id] ?? 0) - l.cantidad
+        // Si el producto no tiene stock controlado (nunca se le cargó un
+        // movimiento) lo dejamos así: no lo convertimos en "0 - vendido".
+        if (nuevo[l.producto.id] !== undefined) {
+          nuevo[l.producto.id] = nuevo[l.producto.id] - l.cantidad
+        }
       }
       guardarStock(tenant.id, nuevo)
       return nuevo
@@ -333,7 +337,7 @@ export function PuntoDeVenta({
         <TecladoCantidad
           producto={productoEnEdicion}
           cantidadInicial={cantidadEnEdicion}
-          stockDisponible={stock[productoEnEdicion.id] ?? 0}
+          stockDisponible={stock[productoEnEdicion.id]}
           onConfirmar={confirmarCantidad}
           onCancelar={() => setProductoEnEdicion(null)}
         />
