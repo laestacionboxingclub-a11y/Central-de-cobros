@@ -276,6 +276,29 @@ body {
   margin-top: 0.25rem;
 }
 
+.panel-ajuste-precios {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.panel-ajuste-input {
+  width: 6.5rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
 .panel-tabla {
   width: 100%;
   border-collapse: collapse;

@@ -124,7 +124,7 @@ Esto es puramente del lado de la app (no hace falta correr nada nuevo en Supabas
 
 Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tiene 4 pestañas:
 
-- **Productos**: crear, editar, activar/desactivar. Cada uno con nombre, precio, unidad (kg, unidad, etc.), foto (por URL, por ahora) y un "stock mínimo" opcional. Si el stock actual de un producto activo cae por debajo de ese mínimo, aparece un aviso arriba de la lista — esa es la alerta de stock bajo.
+- **Productos**: crear, editar, activar/desactivar. Cada uno con nombre, precio, unidad (kg, unidad, etc.), foto (por URL, por ahora) y un "stock mínimo" opcional. Si el stock actual de un producto activo cae por debajo de ese mínimo, aparece un aviso arriba de la lista — esa es la alerta de stock bajo. También se puede **ajustar el precio a varios productos a la vez**: se seleccionan con los checkboxes (o "Seleccionar todos") y se les aplica un porcentaje — positivo para subir, negativo para bajar — de una sola vez, en vez de entrar producto por producto.
 - **Stock**: cargar mercadería nueva, registrar una merma/pérdida, o hacer un ajuste manual. Se ve el stock actual de cada producto antes de tocarlo.
 - **Gastos**: cargar gastos (fecha, categoría, descripción, monto) y ver el historial.
 - **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con períodos rápidos (hoy / esta semana / este mes) o un rango de fechas a elección. Además:

@@ -26,6 +26,9 @@ export function Productos({ tenant }: { tenant: Tenant }) {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm] = useState<FormState>(FORM_VACIO)
   const [guardando, setGuardando] = useState(false)
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [porcentajeAjuste, setPorcentajeAjuste] = useState('')
+  const [aplicandoAjuste, setAplicandoAjuste] = useState(false)
 
   async function cargar() {
     setError(null)
@@ -102,6 +105,45 @@ export function Productos({ tenant }: { tenant: Tenant }) {
   const conStockBajo = (productos ?? []).filter(
     (p) => p.activo && p.stock_minimo !== null && (stock[p.id] ?? 0) < p.stock_minimo
   )
+
+  function alternarSeleccion(id: string) {
+    setSeleccionados((actual) => {
+      const nuevo = new Set(actual)
+      if (nuevo.has(id)) nuevo.delete(id)
+      else nuevo.add(id)
+      return nuevo
+    })
+  }
+
+  function seleccionarTodos() {
+    setSeleccionados(new Set((productos ?? []).map((p) => p.id)))
+  }
+
+  function deseleccionarTodos() {
+    setSeleccionados(new Set())
+  }
+
+  async function aplicarAjustePrecio() {
+    const pct = Number(porcentajeAjuste)
+    if (!porcentajeAjuste.trim() || Number.isNaN(pct) || pct === 0 || seleccionados.size === 0) return
+    setAplicandoAjuste(true)
+    setError(null)
+    try {
+      const afectados = (productos ?? []).filter((p) => seleccionados.has(p.id))
+      await Promise.all(
+        afectados.map((p) =>
+          actualizarProducto(p.id, { precio: Number((p.precio * (1 + pct / 100)).toFixed(2)) })
+        )
+      )
+      setSeleccionados(new Set())
+      setPorcentajeAjuste('')
+      await cargar()
+    } catch {
+      setError('No se pudieron actualizar todos los precios. Revisá e intentá de nuevo.')
+    } finally {
+      setAplicandoAjuste(false)
+    }
+  }
 
   return (
     <div>
@@ -195,44 +237,89 @@ export function Productos({ tenant }: { tenant: Tenant }) {
       )}
 
       {productos !== null && productos.length > 0 && (
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Precio</th>
-              <th>Stock actual</th>
-              <th>Estado</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {productos.map((p) => {
-              const stockActual = stock[p.id] ?? 0
-              const stockBajo = p.stock_minimo !== null && stockActual < p.stock_minimo
-              return (
-                <tr key={p.id} className={!p.activo ? 'fila-inactiva' : ''}>
-                  <td>{p.nombre}</td>
-                  <td>
-                    ${p.precio.toFixed(2)} / {p.unidad_medida}
-                  </td>
-                  <td className={stockBajo ? 'texto-alerta' : ''}>
-                    {stockActual} {p.unidad_medida}
-                    {stockBajo ? ' ⚠' : ''}
-                  </td>
-                  <td>{p.activo ? 'Activo' : 'Inactivo'}</td>
-                  <td className="panel-tabla-acciones">
-                    <button className="link-btn-oscuro" onClick={() => abrirEditar(p)}>
-                      Editar
-                    </button>
-                    <button className="link-btn-oscuro" onClick={() => alternarActivo(p)}>
-                      {p.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+        <>
+          <div className="panel-ajuste-precios">
+            <span>
+              {seleccionados.size > 0
+                ? `${seleccionados.size} producto${seleccionados.size === 1 ? '' : 's'} seleccionado${seleccionados.size === 1 ? '' : 's'}`
+                : 'Seleccioná productos para ajustar el precio a varios a la vez'}
+            </span>
+            <button type="button" className="link-btn-oscuro" onClick={seleccionarTodos}>
+              Seleccionar todos
+            </button>
+            {seleccionados.size > 0 && (
+              <>
+                <button type="button" className="link-btn-oscuro" onClick={deseleccionarTodos}>
+                  Ninguno
+                </button>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="% ej: 10 o -5"
+                  className="panel-ajuste-input"
+                  value={porcentajeAjuste}
+                  onChange={(e) => setPorcentajeAjuste(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-primario"
+                  disabled={aplicandoAjuste || !porcentajeAjuste.trim()}
+                  onClick={aplicarAjustePrecio}
+                >
+                  {aplicandoAjuste ? 'Aplicando...' : 'Aplicar'}
+                </button>
+              </>
+            )}
+          </div>
+
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Nombre</th>
+                <th>Precio</th>
+                <th>Stock actual</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {productos.map((p) => {
+                const stockActual = stock[p.id] ?? 0
+                const stockBajo = p.stock_minimo !== null && stockActual < p.stock_minimo
+                return (
+                  <tr key={p.id} className={!p.activo ? 'fila-inactiva' : ''}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={seleccionados.has(p.id)}
+                        onChange={() => alternarSeleccion(p.id)}
+                        aria-label={`Seleccionar ${p.nombre}`}
+                      />
+                    </td>
+                    <td>{p.nombre}</td>
+                    <td>
+                      ${p.precio.toFixed(2)} / {p.unidad_medida}
+                    </td>
+                    <td className={stockBajo ? 'texto-alerta' : ''}>
+                      {stockActual} {p.unidad_medida}
+                      {stockBajo ? ' ⚠' : ''}
+                    </td>
+                    <td>{p.activo ? 'Activo' : 'Inactivo'}</td>
+                    <td className="panel-tabla-acciones">
+                      <button className="link-btn-oscuro" onClick={() => abrirEditar(p)}>
+                        Editar
+                      </button>
+                      <button className="link-btn-oscuro" onClick={() => alternarActivo(p)}>
+                        {p.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </>
       )}
     </div>
   )
