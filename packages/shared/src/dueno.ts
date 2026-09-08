@@ -1,5 +1,5 @@
 import { supabase } from './supabase/client'
-import type { Gasto, MovimientoStock, Producto, StockActual, Venta } from './types'
+import type { Gasto, MovimientoStock, Producto, StockActual, Venta, VentaItem } from './types'
 
 // A diferencia de fetchProductos (pos.ts), esta trae también los inactivos:
 // el dueño necesita verlos para poder reactivarlos.
@@ -97,6 +97,15 @@ export async function fetchVentasEntre(tenantId: string, desdeISO: string, hasta
     .gte('creada_en', desdeISO)
     .lte('creada_en', hastaISO)
     .order('creada_en', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+// Las líneas de un conjunto de ventas (para "productos más vendidos" en
+// Reportes). RLS ya filtra por tenant a través de la venta relacionada.
+export async function fetchItemsDeVentas(ventaIds: string[]): Promise<VentaItem[]> {
+  if (ventaIds.length === 0) return []
+  const { data, error } = await supabase.from('venta_items').select('*').in('venta_id', ventaIds)
   if (error) throw error
   return data ?? []
 }

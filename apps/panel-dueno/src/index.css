@@ -192,6 +192,11 @@ body {
   cursor: pointer;
 }
 
+.btn-secundario:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .alerta-stock {
   background: #fdf1e3;
   color: #92400e;
@@ -307,6 +312,30 @@ body {
   font-size: 1.4rem;
   font-weight: 700;
   color: #2563eb;
+}
+
+.reportes-fechas {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.reportes-fechas label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #444;
+  font-weight: 600;
+}
+
+.reportes-fechas input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
 }
 
 .panel-stat-negativo .panel-stat-valor {

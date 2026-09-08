@@ -127,7 +127,10 @@ Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tie
 - **Productos**: crear, editar, activar/desactivar. Cada uno con nombre, precio, unidad (kg, unidad, etc.), foto (por URL, por ahora) y un "stock mínimo" opcional. Si el stock actual de un producto activo cae por debajo de ese mínimo, aparece un aviso arriba de la lista — esa es la alerta de stock bajo.
 - **Stock**: cargar mercadería nueva, registrar una merma/pérdida, o hacer un ajuste manual. Se ve el stock actual de cada producto antes de tocarlo.
 - **Gastos**: cargar gastos (fecha, categoría, descripción, monto) y ver el historial.
-- **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con tres períodos rápidos (hoy / esta semana / este mes).
+- **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con períodos rápidos (hoy / esta semana / este mes) o un rango de fechas a elección. Además:
+  - **Por caja**: cuánto vendió cada caja en el período, y cuánto efectivo acumuló (para el arqueo).
+  - **Productos más vendidos**: top 10 por cantidad vendida.
+  - **Descargar CSV**: baja todo el reporte del período elegido en un archivo para abrir en Excel/Sheets.
 
 Como la seguridad de la base ya quedó resuelta en el Paso 2 (cada dueño solo puede tocar los datos de su propia verdulería), esta pantalla no necesitó ninguna migración nueva de Supabase.
 
