@@ -2,7 +2,7 @@
 
 Sistema de punto de venta multi-tenant para verdulerías. Este repo contiene las 3 apps del sistema y el código compartido entre ellas.
 
-**Estado actual: Paso 2 (modelo de datos).** El esquema de la base de datos ya está diseñado y escrito. Todavía no hay pantallas funcionales — eso empieza en el Paso 3.
+**Estado actual: Paso 3 (login y roles).** Cada app ya sabe pedir login y mostrar solo lo que le corresponde a cada rol. Todavía no hay pantallas de venta, stock ni reportes — eso empieza en el Paso 4.
 
 ## Estructura del proyecto
 
@@ -72,6 +72,23 @@ Una vez que tengas el proyecto creado en supabase.com (ver sección anterior):
 3. Apretá **Run**. Se crean las 8 tablas, la vista de stock y las reglas de seguridad, todo de una vez.
 
 Si más adelante cambiamos el modelo, va a aparecer un archivo nuevo `0002_...sql` en la misma carpeta, y se corre de la misma forma.
+
+## Login y roles (Paso 3)
+
+Cada una de las 3 apps ahora pide iniciar sesión (email + contraseña) y solo deja pasar al rol que le corresponde:
+
+- **App de Caja** → acepta `cajero` y `dueno` (el dueño también puede cobrar si hace falta).
+- **Panel del Dueño** → acepta solo `dueno`.
+- **Panel Central** → acepta solo `superadmin` (vos).
+
+Si alguien entra con un rol que no corresponde a esa app, o si su verdulería está `suspendida` (columna `estado` de `tenants`), ve un mensaje claro en vez de la pantalla normal — nunca llega a ver datos que no le corresponden.
+
+Importante: **esto todavía no se puede probar de verdad** porque no hay un proyecto de Supabase conectado ni usuarios creados. Cuando creemos el proyecto (ver más abajo), para que alguien pueda entrar hace falta:
+
+1. Crear el usuario en **Authentication → Users** del panel de Supabase (con email y contraseña) — esto lo hacés vos por ahora, a mano, para cada dueño/cajero. Automatizar esa alta es el Paso 7 (tu panel central).
+2. Crear su fila correspondiente en la tabla `perfiles` (mismo `id` que el usuario, más su `tenant_id` y `rol`) desde el SQL Editor.
+
+Sin esos dos pasos, el login funciona pero la persona ve "no tenés un perfil asignado".
 
 ## Requisito para correr el proyecto: Node.js
 

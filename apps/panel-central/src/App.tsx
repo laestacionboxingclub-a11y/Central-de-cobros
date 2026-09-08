@@ -1,17 +1,71 @@
 import { isSupabaseConfigured } from '@cdc/shared'
+import { AuthProvider, useAuth } from './auth/AuthProvider'
+import { LoginPage } from './auth/LoginPage'
 
-function App() {
+const ROLES_PERMITIDOS = ['superadmin']
+const ETIQUETA_APP = 'Panel Central (Súper-Admin)'
+
+function Contenido() {
+  const { loading, session, perfil, error, logout } = useAuth()
+
+  if (loading) {
+    return (
+      <main className="app-shell">
+        <p className="app-status">Cargando...</p>
+      </main>
+    )
+  }
+
+  if (!session) {
+    return <LoginPage etiqueta={ETIQUETA_APP} />
+  }
+
+  if (error) {
+    return (
+      <main className="app-shell">
+        <p className="warn">{error}</p>
+        <button onClick={logout}>Cerrar sesión</button>
+      </main>
+    )
+  }
+
+  if (perfil && !ROLES_PERMITIDOS.includes(perfil.rol)) {
+    return (
+      <main className="app-shell">
+        <p className="warn">Tu usuario ({perfil.rol}) no tiene acceso a {ETIQUETA_APP}.</p>
+        <button onClick={logout}>Cerrar sesión</button>
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell">
       <h1>Central de Cobros</h1>
-      <p className="app-label">Panel Central (Súper-Admin)</p>
+      <p className="app-label">{ETIQUETA_APP}</p>
       <p className="app-status">
-        Base técnica lista (Paso 1). Todavía sin alta de clientes ni soporte remoto.
+        Sesión iniciada como {perfil?.nombre} ({perfil?.rol})
       </p>
-      <p className={isSupabaseConfigured ? 'ok' : 'warn'}>
-        Supabase: {isSupabaseConfigured ? 'conectado' : 'sin configurar (completá .env)'}
-      </p>
+      <p className="app-status">Todavía sin alta de clientes ni soporte remoto (Paso 7).</p>
+      <button onClick={logout}>Cerrar sesión</button>
     </main>
+  )
+}
+
+function App() {
+  if (!isSupabaseConfigured) {
+    return (
+      <main className="app-shell">
+        <h1>Central de Cobros</h1>
+        <p className="app-label">{ETIQUETA_APP}</p>
+        <p className="warn">Falta configurar Supabase (ver README) antes de poder iniciar sesión.</p>
+      </main>
+    )
+  }
+
+  return (
+    <AuthProvider>
+      <Contenido />
+    </AuthProvider>
   )
 }
 
