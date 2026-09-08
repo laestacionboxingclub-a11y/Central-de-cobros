@@ -2,7 +2,7 @@
 
 Sistema de punto de venta multi-tenant para verdulerías. Este repo contiene las 3 apps del sistema y el código compartido entre ellas.
 
-**Estado actual: Paso 3 (login y roles).** Cada app ya sabe pedir login y mostrar solo lo que le corresponde a cada rol. Todavía no hay pantallas de venta, stock ni reportes — eso empieza en el Paso 4.
+**Estado actual: Paso 4 (punto de venta).** La app de Caja ya permite vender de verdad: catálogo, carrito, cobro e impresión de comprobante. Todavía no hay modo offline (Paso 5) ni panel del dueño para cargar stock/precios (Paso 6).
 
 ## Estructura del proyecto
 
@@ -89,6 +89,24 @@ Importante: **esto todavía no se puede probar de verdad** porque no hay un proy
 2. Crear su fila correspondiente en la tabla `perfiles` (mismo `id` que el usuario, más su `tenant_id` y `rol`) desde el SQL Editor.
 
 Sin esos dos pasos, el login funciona pero la persona ve "no tenés un perfil asignado".
+
+## Punto de venta (Paso 4)
+
+La app de Caja ahora tiene el flujo completo de venta:
+
+1. **Elegir caja**: la primera vez que se abre la app en una tablet, pregunta qué caja es (o deja crear una nueva). Queda guardado en esa tablet — no se vuelve a preguntar.
+2. **Catálogo**: lista los productos cargados de esa verdulería, con buscador.
+3. **Carrito**: tocar un producto lo agrega (o suma 1 si ya estaba); la cantidad se puede editar a mano, incluso con decimales para productos por kg.
+4. **Cobro**: elegir método de pago (efectivo, posnet o transferencia) y confirmar.
+5. **Comprobante**: se muestra en pantalla con formato de ticket y un botón "Imprimir" que abre el diálogo de impresión del navegador/tablet (todavía no manda comandos a una impresora térmica específica — eso se ajusta más adelante según el modelo real que tenga cada cliente).
+
+Detalle técnico importante: registrar una venta (la venta + sus líneas + los movimientos de stock) es **una sola operación atómica** en la base de datos — o se guarda todo, o no se guarda nada. Está implementado como una función de Postgres (`registrar_venta`, en [`supabase/migrations/0002_registrar_venta.sql`](supabase/migrations/0002_registrar_venta.sql)) para evitar que quede una venta a medias si se corta la conexión en el momento exacto de cobrar.
+
+Como con el Paso 2, para aplicar esto a tu proyecto hay que correr ese archivo en el **SQL Editor** de Supabase (el mismo lugar de siempre).
+
+### Para probar una venta real
+
+Como todavía no existe el panel del dueño (Paso 6) para cargar productos, hace falta cargar unos productos de prueba a mano por SQL Editor, y tener un usuario con rol `dueno` o `cajero` (tu usuario actual es `superadmin`, que no tiene acceso a la app de Caja a propósito). Cuando quieras hacer esa prueba, avisame y te paso el SQL con los datos de ejemplo.
 
 ## Requisito para correr el proyecto: Node.js
 
