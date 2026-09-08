@@ -454,6 +454,18 @@ body {
   margin-left: 0.4rem;
 }
 
+.teclado-disponible {
+  text-align: center;
+  margin: -0.4rem 0 0;
+  font-size: 0.85rem;
+}
+
+.teclado-aviso {
+  text-align: center;
+  margin: -0.4rem 0 0;
+  font-size: 0.85rem;
+}
+
 .teclado-chips {
   display: flex;
   gap: 0.4rem;

@@ -10,6 +10,7 @@ export interface VentaPendiente {
 }
 
 const CATALOGO_KEY = (tenantId: string) => `cdc_catalogo_${tenantId}`
+const STOCK_KEY = (tenantId: string) => `cdc_stock_${tenantId}`
 const PERFIL_KEY = (userId: string) => `cdc_perfil_${userId}`
 const COLA_KEY = 'cdc_cola_ventas'
 
@@ -24,6 +25,22 @@ export function guardarCatalogo(tenantId: string, productos: Producto[]) {
 
 export function leerCatalogoGuardado(tenantId: string): { productos: Producto[]; guardadoEn: string } | null {
   const raw = localStorage.getItem(CATALOGO_KEY(tenantId))
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+// ---- stock (para saber cuánto queda de cada producto sin depender de la red) ----
+
+export function guardarStock(tenantId: string, stock: Record<string, number>) {
+  localStorage.setItem(STOCK_KEY(tenantId), JSON.stringify(stock))
+}
+
+export function leerStockGuardado(tenantId: string): Record<string, number> | null {
+  const raw = localStorage.getItem(STOCK_KEY(tenantId))
   if (!raw) return null
   try {
     return JSON.parse(raw)

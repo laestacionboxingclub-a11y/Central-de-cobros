@@ -10,11 +10,15 @@ function chipsPara(producto: Producto): number[] {
 export function TecladoCantidad({
   producto,
   cantidadInicial,
+  stockDisponible,
   onConfirmar,
   onCancelar
 }: {
   producto: Producto
   cantidadInicial?: number
+  // Cuánto queda de este producto según los movimientos de stock (Paso 2).
+  // No deja cargar más de esto en el carrito.
+  stockDisponible: number
   onConfirmar: (cantidad: number) => void
   onCancelar: () => void
 }) {
@@ -22,8 +26,10 @@ export function TecladoCantidad({
     if (cantidadInicial) return String(cantidadInicial)
     return producto.unidad_medida === 'unidad' || producto.unidad_medida === 'docena' ? '1' : ''
   })
+  const [avisoStock, setAvisoStock] = useState(false)
 
   function tocarTecla(tecla: string) {
+    setAvisoStock(false)
     if (tecla === '⌫') {
       setValor((v) => v.slice(0, -1))
       return
@@ -35,8 +41,23 @@ export function TecladoCantidad({
     })
   }
 
+  function elegirChip(c: number) {
+    setAvisoStock(false)
+    setValor(String(c))
+  }
+
   const cantidad = Number(valor)
-  const esValido = valor !== '' && cantidad > 0
+  const sinStock = stockDisponible <= 0
+  const esValido = valor !== '' && cantidad > 0 && !sinStock
+
+  function confirmar() {
+    if (cantidad > stockDisponible) {
+      setValor(String(stockDisponible))
+      setAvisoStock(true)
+      return
+    }
+    onConfirmar(cantidad)
+  }
 
   return (
     <div className="teclado-overlay" onClick={onCancelar}>
@@ -48,9 +69,23 @@ export function TecladoCantidad({
           <span className="teclado-unidad">{producto.unidad_medida}</span>
         </div>
 
+        <p className="app-status teclado-disponible">
+          Disponible: {stockDisponible} {producto.unidad_medida}
+        </p>
+
+        {sinStock ? (
+          <p className="warn teclado-aviso">No queda stock de este producto.</p>
+        ) : (
+          avisoStock && (
+            <p className="warn teclado-aviso">
+              No hay tanto — se ajustó al máximo disponible ({stockDisponible} {producto.unidad_medida}).
+            </p>
+          )
+        )}
+
         <div className="teclado-chips">
           {chipsPara(producto).map((c) => (
-            <button key={c} type="button" onClick={() => setValor(String(c))}>
+            <button key={c} type="button" onClick={() => elegirChip(c)}>
               {c}
             </button>
           ))}
@@ -68,12 +103,7 @@ export function TecladoCantidad({
           <button type="button" className="teclado-cancelar" onClick={onCancelar}>
             Cancelar
           </button>
-          <button
-            type="button"
-            className="teclado-confirmar"
-            disabled={!esValido}
-            onClick={() => onConfirmar(cantidad)}
-          >
+          <button type="button" className="teclado-confirmar" disabled={!esValido} onClick={confirmar}>
             Agregar
           </button>
         </div>

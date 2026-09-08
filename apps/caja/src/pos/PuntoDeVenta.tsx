@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchProductos, registrarVenta, type MetodoPago, type Perfil, type Producto, type Tenant } from '@cdc/shared'
+import {
+  fetchProductos,
+  fetchStockActual,
+  registrarVenta,
+  type MetodoPago,
+  type Perfil,
+  type Producto,
+  type Tenant
+} from '@cdc/shared'
 import { ETIQUETA_METODO } from './constants'
 import { Comprobante, type VentaConfirmada } from './Comprobante'
 import { ImprimiendoTicket } from './ImprimiendoTicket'
 import { TecladoCantidad } from './TecladoCantidad'
 import { siguienteNumeroComprobante, type CajaSeleccionada } from './localCaja'
-import { encolarVenta, guardarCatalogo, leerCatalogoGuardado } from '../offline/almacenLocal'
+import { encolarVenta, guardarCatalogo, guardarStock, leerCatalogoGuardado, leerStockGuardado } from '../offline/almacenLocal'
 import { esErrorDeRed } from '../offline/sincronizar'
 import { useSincronizacion } from '../offline/useSincronizacion'
 
@@ -30,6 +38,7 @@ export function PuntoDeVenta({
   onLogout: () => void
 }) {
   const [productos, setProductos] = useState<Producto[] | null>(null)
+  const [stock, setStock] = useState<Record<string, number>>({})
   const [errorCarga, setErrorCarga] = useState<string | null>(null)
   const [catalogoGuardadoEn, setCatalogoGuardadoEn] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
@@ -59,6 +68,16 @@ export function PuntoDeVenta({
         } else {
           setErrorCarga('No se pudieron cargar los productos.')
         }
+      })
+
+    fetchStockActual(tenant.id)
+      .then((data) => {
+        setStock(data)
+        guardarStock(tenant.id, data)
+      })
+      .catch(() => {
+        const cache = leerStockGuardado(tenant.id)
+        if (cache) setStock(cache)
       })
   }, [tenant.id])
 
@@ -152,6 +171,18 @@ export function PuntoDeVenta({
       actualizarPendientes()
       pendienteSync = true
     }
+
+    // Descontamos el stock ya mismo en la pantalla (no esperamos a releer el
+    // servidor): así, si el cajero encadena varias ventas seguidas del mismo
+    // producto, cada una ve el stock ya actualizado por la anterior.
+    setStock((actual) => {
+      const nuevo = { ...actual }
+      for (const l of carrito) {
+        nuevo[l.producto.id] = (nuevo[l.producto.id] ?? 0) - l.cantidad
+      }
+      guardarStock(tenant.id, nuevo)
+      return nuevo
+    })
 
     setVentaPendiente({ numero, items: carrito, total, metodoPago, fecha: ahora, pendienteSync })
     setImprimiendo(true)
@@ -302,6 +333,7 @@ export function PuntoDeVenta({
         <TecladoCantidad
           producto={productoEnEdicion}
           cantidadInicial={cantidadEnEdicion}
+          stockDisponible={stock[productoEnEdicion.id] ?? 0}
           onConfirmar={confirmarCantidad}
           onCancelar={() => setProductoEnEdicion(null)}
         />
