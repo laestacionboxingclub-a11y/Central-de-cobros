@@ -46,6 +46,10 @@ async function enviarEmail(destinatarios: string[], tenantNombre: string, produc
     })
   })
 
+  if (!respuesta.ok) {
+    console.log('Resend respondió con error:', respuesta.status, await respuesta.text())
+  }
+
   return respuesta.ok
 }
 
@@ -58,46 +62,76 @@ Deno.serve(async () => {
     .eq('estado', 'activo')
 
   if (errorTenants) {
+    console.log('Error buscando tenants:', errorTenants.message)
     return new Response(errorTenants.message, { status: 500 })
   }
+
+  console.log(`Tenants activos: ${tenants?.length ?? 0}`)
 
   let emailsEnviados = 0
 
   for (const tenant of tenants ?? []) {
-    const { data: productos } = await supabase
+    const { data: productos, error: errorProductos } = await supabase
       .from('productos')
       .select('id, nombre, unidad_medida, stock_minimo')
       .eq('tenant_id', tenant.id)
       .eq('activo', true)
       .not('stock_minimo', 'is', null)
 
+    if (errorProductos) console.log(`[${tenant.nombre}] error productos:`, errorProductos.message)
+    console.log(`[${tenant.nombre}] productos con stock mínimo configurado: ${productos?.length ?? 0}`)
+
     if (!productos || productos.length === 0) continue
 
-    const { data: stockRows } = await supabase.from('stock_actual').select('producto_id, stock').eq('tenant_id', tenant.id)
-    const stockPorProducto = new Map((stockRows ?? []).map((r) => [r.producto_id, r.stock as number]))
+    const { data: stockRows, error: errorStock } = await supabase
+      .from('stock_actual')
+      .select('producto_id, stock')
+      .eq('tenant_id', tenant.id)
+    if (errorStock) console.log(`[${tenant.nombre}] error stock_actual:`, errorStock.message)
+
+    const stockPorProducto = new Map((stockRows ?? []).map((r) => [r.producto_id, Number(r.stock)]))
 
     const bajos: ProductoBajo[] = productos
-      .filter((p) => (stockPorProducto.get(p.id) ?? 0) < (p.stock_minimo ?? 0))
+      .filter((p) => (stockPorProducto.get(p.id) ?? 0) < Number(p.stock_minimo))
       .map((p) => ({
         nombre: p.nombre,
         unidad_medida: p.unidad_medida,
         stock: stockPorProducto.get(p.id) ?? 0,
-        stock_minimo: p.stock_minimo as number
+        stock_minimo: Number(p.stock_minimo)
       }))
+
+    console.log(
+      `[${tenant.nombre}] detalle stock:`,
+      JSON.stringify(
+        productos.map((p) => ({ nombre: p.nombre, minimo: p.stock_minimo, actual: stockPorProducto.get(p.id) ?? 0 }))
+      )
+    )
+    console.log(`[${tenant.nombre}] productos por debajo del mínimo: ${bajos.length}`)
 
     if (bajos.length === 0) continue
 
-    const { data: duenos } = await supabase.from('perfiles').select('id').eq('tenant_id', tenant.id).eq('rol', 'dueno')
+    const { data: duenos, error: errorDuenos } = await supabase
+      .from('perfiles')
+      .select('id')
+      .eq('tenant_id', tenant.id)
+      .eq('rol', 'dueno')
+    if (errorDuenos) console.log(`[${tenant.nombre}] error perfiles:`, errorDuenos.message)
+    console.log(`[${tenant.nombre}] dueños encontrados: ${duenos?.length ?? 0}`)
+
     if (!duenos || duenos.length === 0) continue
 
     const destinatarios: string[] = []
     for (const d of duenos) {
-      const { data: userData } = await supabase.auth.admin.getUserById(d.id)
+      const { data: userData, error: errorUser } = await supabase.auth.admin.getUserById(d.id)
+      if (errorUser) console.log(`[${tenant.nombre}] error getUserById(${d.id}):`, errorUser.message)
       if (userData?.user?.email) destinatarios.push(userData.user.email)
     }
+    console.log(`[${tenant.nombre}] destinatarios: ${JSON.stringify(destinatarios)}`)
+
     if (destinatarios.length === 0) continue
 
     const enviado = await enviarEmail(destinatarios, tenant.nombre, bajos)
+    console.log(`[${tenant.nombre}] email enviado: ${enviado}`)
     if (enviado) emailsEnviados++
   }
 
