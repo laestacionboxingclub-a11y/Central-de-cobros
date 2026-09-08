@@ -95,14 +95,14 @@ Sin esos dos pasos, el login funciona pero la persona ve "no tenés un perfil as
 La app de Caja ahora tiene el flujo completo de venta:
 
 1. **Elegir caja**: la primera vez que se abre la app en una tablet, pregunta qué caja es (o deja crear una nueva). Queda guardado en esa tablet — no se vuelve a preguntar.
-2. **Catálogo**: lista los productos cargados de esa verdulería, con buscador.
-3. **Carrito**: tocar un producto lo agrega (o suma 1 si ya estaba); la cantidad se puede editar a mano, incluso con decimales para productos por kg.
-4. **Cobro**: elegir método de pago (efectivo, posnet o transferencia) y confirmar.
+2. **Catálogo**: lista los productos cargados de esa verdulería, con buscador y foto (si el producto tiene una cargada; si no, muestra un ícono genérico).
+3. **Carrito**: tocar un producto abre un teclado numérico grande (tipo balanza) para cargar la cantidad exacta, con atajos para pesos/cantidades comunes. Tocar la cantidad de una línea ya agregada la vuelve a abrir para corregirla.
+4. **Cobro**: elegir método de pago (efectivo, posnet o transferencia) y confirmar. Al cobrar se ve una animación de "ticket saliendo de la impresora" antes de mostrar el comprobante.
 5. **Comprobante**: se muestra en pantalla con formato de ticket y un botón "Imprimir" que abre el diálogo de impresión del navegador/tablet (todavía no manda comandos a una impresora térmica específica — eso se ajusta más adelante según el modelo real que tenga cada cliente).
 
 Detalle técnico importante: registrar una venta (la venta + sus líneas + los movimientos de stock) es **una sola operación atómica** en la base de datos — o se guarda todo, o no se guarda nada. Está implementado como una función de Postgres (`registrar_venta`, en [`supabase/migrations/0002_registrar_venta.sql`](supabase/migrations/0002_registrar_venta.sql)) para evitar que quede una venta a medias si se corta la conexión en el momento exacto de cobrar.
 
-Como con el Paso 2, para aplicar esto a tu proyecto hay que correr ese archivo en el **SQL Editor** de Supabase (el mismo lugar de siempre).
+Como con el Paso 2, para aplicar esto a tu proyecto hay que correr ese archivo en el **SQL Editor** de Supabase (el mismo lugar de siempre). También hay una migración chica más ([`0003_productos_foto.sql`](supabase/migrations/0003_productos_foto.sql)) que agrega la columna de foto a los productos — se corre igual. Cargar la foto de cada producto todavía se hace a mano por SQL (`update productos set foto_url = '...' where id = '...'`); una pantalla para subirla desde el panel del dueño es un lindo agregado para el Paso 6.
 
 ### Para probar una venta real
 

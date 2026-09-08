@@ -34,6 +34,7 @@ export interface Producto {
   tenant_id: string
   nombre: string
   unidad_medida: string
+  foto_url: string | null
   precio: number
   stock_minimo: number | null
   activo: boolean

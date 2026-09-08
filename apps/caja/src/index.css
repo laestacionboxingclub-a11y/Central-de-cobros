@@ -172,6 +172,21 @@ body {
   border-color: #1b7a3d;
 }
 
+.pos-producto-foto {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #f0f0f0;
+}
+
+.pos-producto-foto-vacia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+}
+
 .pos-producto-nombre {
   font-weight: 600;
 }
@@ -208,11 +223,16 @@ body {
   font-size: 0.9rem;
 }
 
-.pos-cantidad {
-  width: 55px;
-  padding: 0.3rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.pos-cantidad-chip {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #1b7a3d;
+  border-radius: 999px;
+  background: #eaf5ee;
+  color: #1b7a3d;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .pos-quitar {
@@ -266,6 +286,188 @@ body {
 .pos-cobrar-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ---- Teclado de cantidad (tipo balanza) ---- */
+
+.teclado-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 60;
+}
+
+@media (min-width: 480px) {
+  .teclado-overlay {
+    align-items: center;
+  }
+}
+
+.teclado-card {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 480px) {
+  .teclado-card {
+    border-radius: 16px;
+  }
+}
+
+.teclado-producto {
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+}
+
+.teclado-display {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  font-family: monospace;
+  background: #f5f6f5;
+  border-radius: 10px;
+  padding: 0.5rem;
+}
+
+.teclado-unidad {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #666;
+  margin-left: 0.4rem;
+}
+
+.teclado-chips {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.teclado-chips button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #1b7a3d;
+  border-radius: 999px;
+  background: #eaf5ee;
+  color: #1b7a3d;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.teclado-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.teclado-grid button {
+  padding: 0.9rem;
+  font-size: 1.2rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+}
+
+.teclado-grid button:active {
+  background: #eee;
+}
+
+.teclado-acciones {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.teclado-acciones button {
+  flex: 1;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.teclado-cancelar {
+  background: #eee;
+  color: #333;
+}
+
+.teclado-confirmar {
+  background: #1b7a3d;
+  color: #fff;
+  font-weight: 600;
+}
+
+.teclado-confirmar:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- Animación "imprimiendo" al cobrar ---- */
+
+.imprimiendo-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(245, 246, 245, 0.97);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  z-index: 70;
+}
+
+.impresora {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.ticket-saliendo {
+  width: 108px;
+  height: 130px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-130px);
+  animation: salir-ticket 1.1s ease-out forwards;
+}
+
+.impresora-ranura {
+  width: 132px;
+  height: 14px;
+  background: #333;
+  border-radius: 4px;
+  margin-top: -6px;
+  z-index: 2;
+}
+
+@keyframes salir-ticket {
+  0% {
+    transform: translateY(-130px);
+  }
+  70% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(10px);
+  }
 }
 
 /* ---- Comprobante ---- */

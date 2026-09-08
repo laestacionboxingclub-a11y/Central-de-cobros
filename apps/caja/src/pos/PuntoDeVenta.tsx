@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchProductos, registrarVenta, type MetodoPago, type Perfil, type Producto, type Tenant } from '@cdc/shared'
 import { ETIQUETA_METODO } from './constants'
 import { Comprobante, type VentaConfirmada } from './Comprobante'
+import { ImprimiendoTicket } from './ImprimiendoTicket'
+import { TecladoCantidad } from './TecladoCantidad'
 import { siguienteNumeroComprobante, type CajaSeleccionada } from './localCaja'
 
 interface LineaCarrito {
@@ -28,9 +30,12 @@ export function PuntoDeVenta({
   const [errorCarga, setErrorCarga] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [carrito, setCarrito] = useState<LineaCarrito[]>([])
+  const [productoEnEdicion, setProductoEnEdicion] = useState<Producto | null>(null)
   const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(null)
   const [cobrando, setCobrando] = useState(false)
+  const [imprimiendo, setImprimiendo] = useState(false)
   const [errorCobro, setErrorCobro] = useState<string | null>(null)
+  const [ventaPendiente, setVentaPendiente] = useState<VentaConfirmada | null>(null)
   const [ventaConfirmada, setVentaConfirmada] = useState<VentaConfirmada | null>(null)
 
   useEffect(() => {
@@ -51,21 +56,23 @@ export function PuntoDeVenta({
     [carrito]
   )
 
-  function agregarProducto(producto: Producto) {
+  const cantidadEnEdicion = productoEnEdicion
+    ? carrito.find((l) => l.producto.id === productoEnEdicion.id)?.cantidad
+    : undefined
+
+  function confirmarCantidad(cantidad: number) {
+    const producto = productoEnEdicion
+    if (!producto) return
     setCarrito((actual) => {
       const idx = actual.findIndex((l) => l.producto.id === producto.id)
       if (idx >= 0) {
         const copia = [...actual]
-        copia[idx] = { ...copia[idx], cantidad: copia[idx].cantidad + 1 }
+        copia[idx] = { ...copia[idx], cantidad }
         return copia
       }
-      return [...actual, { producto, cantidad: 1 }]
+      return [...actual, { producto, cantidad }]
     })
-  }
-
-  function cambiarCantidad(productoId: string, cantidad: number) {
-    if (cantidad < 0) return
-    setCarrito((actual) => actual.map((l) => (l.producto.id === productoId ? { ...l, cantidad } : l)))
+    setProductoEnEdicion(null)
   }
 
   function quitarLinea(productoId: string) {
@@ -114,7 +121,8 @@ export function PuntoDeVenta({
 
       await registrarVenta({ venta, items, movimientos })
 
-      setVentaConfirmada({ numero, items: carrito, total, metodoPago, fecha: ahora })
+      setVentaPendiente({ numero, items: carrito, total, metodoPago, fecha: ahora })
+      setImprimiendo(true)
       setCarrito([])
       setMetodoPago(null)
     } catch {
@@ -122,6 +130,17 @@ export function PuntoDeVenta({
     } finally {
       setCobrando(false)
     }
+  }
+
+  if (imprimiendo) {
+    return (
+      <ImprimiendoTicket
+        onFinish={() => {
+          setVentaConfirmada(ventaPendiente)
+          setImprimiendo(false)
+        }}
+      />
+    )
   }
 
   if (ventaConfirmada) {
@@ -166,7 +185,12 @@ export function PuntoDeVenta({
         )}
         <div className="pos-grid">
           {productosFiltrados.map((p) => (
-            <button key={p.id} className="pos-producto" onClick={() => agregarProducto(p)}>
+            <button key={p.id} className="pos-producto" onClick={() => setProductoEnEdicion(p)}>
+              {p.foto_url ? (
+                <img src={p.foto_url} alt={p.nombre} className="pos-producto-foto" />
+              ) : (
+                <div className="pos-producto-foto pos-producto-foto-vacia">🥬</div>
+              )}
               <span className="pos-producto-nombre">{p.nombre}</span>
               <span className="pos-producto-precio">
                 ${p.precio.toFixed(2)} / {p.unidad_medida}
@@ -183,14 +207,9 @@ export function PuntoDeVenta({
           {carrito.map((l) => (
             <li key={l.producto.id} className="pos-linea">
               <span className="pos-linea-nombre">{l.producto.nombre}</span>
-              <input
-                type="number"
-                min="0"
-                step="0.001"
-                value={l.cantidad}
-                onChange={(e) => cambiarCantidad(l.producto.id, Number(e.target.value))}
-                className="pos-cantidad"
-              />
+              <button className="pos-cantidad-chip" onClick={() => setProductoEnEdicion(l.producto)}>
+                {l.cantidad} {l.producto.unidad_medida}
+              </button>
               <span className="pos-linea-subtotal">${(l.cantidad * l.producto.precio).toFixed(2)}</span>
               <button className="pos-quitar" onClick={() => quitarLinea(l.producto.id)} aria-label="Quitar">
                 ✕
@@ -223,6 +242,15 @@ export function PuntoDeVenta({
           {cobrando ? 'Cobrando...' : `Cobrar $${total.toFixed(2)}`}
         </button>
       </aside>
+
+      {productoEnEdicion && (
+        <TecladoCantidad
+          producto={productoEnEdicion}
+          cantidadInicial={cantidadEnEdicion}
+          onConfirmar={confirmarCantidad}
+          onCancelar={() => setProductoEnEdicion(null)}
+        />
+      )}
     </div>
   )
 }
