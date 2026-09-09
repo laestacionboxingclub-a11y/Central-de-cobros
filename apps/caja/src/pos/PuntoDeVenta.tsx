@@ -13,6 +13,7 @@ import {
   type Tenant
 } from '@cdc/shared'
 import { ETIQUETA_METODO } from './constants'
+import { CierreCaja } from './CierreCaja'
 import { Comprobante, type VentaConfirmada } from './Comprobante'
 import { ImprimiendoTicket } from './ImprimiendoTicket'
 import { TecladoCantidad } from './TecladoCantidad'
@@ -69,6 +70,7 @@ export function PuntoDeVenta({
   const [errorCobro, setErrorCobro] = useState<string | null>(null)
   const [ventaPendiente, setVentaPendiente] = useState<VentaConfirmada | null>(null)
   const [ventaConfirmada, setVentaConfirmada] = useState<VentaConfirmada | null>(null)
+  const [cerrandoCaja, setCerrandoCaja] = useState(false)
 
   const { enLinea, pendientes, sincronizando, sincronizarAhora, actualizarPendientes } = useSincronizacion()
 
@@ -310,6 +312,18 @@ export function PuntoDeVenta({
     )
   }
 
+  if (cerrandoCaja) {
+    return (
+      <CierreCaja
+        tenant={tenant}
+        caja={caja}
+        perfil={perfil}
+        onCerrar={() => setCerrandoCaja(false)}
+        onVolver={() => setCerrandoCaja(false)}
+      />
+    )
+  }
+
   return (
     <div className="pos-layout">
       <header className="pos-header no-imprimir">
@@ -317,6 +331,9 @@ export function PuntoDeVenta({
           <strong>{tenant.nombre}</strong> · {caja.nombre} · {perfil.nombre}
         </div>
         <div className="pos-header-acciones">
+          <button className="link-btn" onClick={() => setCerrandoCaja(true)}>
+            Cerrar caja
+          </button>
           <button className="link-btn" onClick={onCambiarCaja}>
             Cambiar caja
           </button>

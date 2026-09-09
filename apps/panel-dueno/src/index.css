@@ -216,6 +216,17 @@ body {
   cursor: pointer;
 }
 
+.btn-whatsapp {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  background: #25d366;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .btn-secundario:disabled {
   opacity: 0.5;
   cursor: default;

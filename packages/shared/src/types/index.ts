@@ -127,3 +127,14 @@ export interface CuentaCorrienteSaldo {
   cliente_id: string
   saldo: number
 }
+
+export interface CierreCaja {
+  id: string
+  tenant_id: string
+  caja_id: string
+  efectivo_esperado: number
+  efectivo_contado: number
+  diferencia: number
+  cerrado_por: string | null
+  creado_en: string
+}

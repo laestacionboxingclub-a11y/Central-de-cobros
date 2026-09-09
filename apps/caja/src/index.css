@@ -71,6 +71,53 @@ body {
   cursor: default;
 }
 
+.cierre-caja-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 280px;
+  font-weight: 600;
+  color: #333;
+}
+
+.cierre-caja-label input {
+  padding: 0.65rem 0.75rem;
+  font-size: 1.1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-weight: 400;
+}
+
+.cierre-caja-acciones {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 0.5rem;
+}
+
+.cierre-caja-acciones button {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #1b7a3d;
+  color: #fff;
+  cursor: pointer;
+}
+
+.cierre-caja-acciones button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cierre-caja-cancelar {
+  background: #eee !important;
+  color: #333 !important;
+}
+
 .lista-cajas {
   display: flex;
   flex-direction: column;

@@ -122,12 +122,13 @@ Esto es puramente del lado de la app (no hace falta correr nada nuevo en Supabas
 
 ## Panel del dueño (Paso 6)
 
-Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tiene 5 pestañas:
+Ya no hace falta tocar SQL a mano para cargar productos: el Panel del Dueño tiene 6 pestañas:
 
 - **Productos**: crear, editar, activar/desactivar. Cada uno con nombre, precio, unidad (kg, unidad, cajón, bulto, saco, etc. — es texto libre, no una lista cerrada) y un "stock mínimo" opcional. Si el stock actual de un producto activo cae por debajo de ese mínimo, aparece un aviso arriba de la lista — esa es la alerta de stock bajo. También se puede **ajustar el precio a varios productos a la vez**: se seleccionan con los checkboxes (o "Seleccionar todos") y se les aplica un porcentaje — positivo para subir, negativo para bajar — de una sola vez, en vez de entrar producto por producto.
 - **Stock**: cargar mercadería nueva, registrar una merma/pérdida, o hacer un ajuste manual. Se ve el stock actual de cada producto antes de tocarlo.
-- **Clientes**: cuenta corriente. Se cargan los clientes habituales (nombre y teléfono opcional) y se ve cuánto debe cada uno. Al entrar a un cliente se ve su historial completo (cada venta a cuenta y cada pago) y se puede registrar un pago para descontarle el saldo. Ver también la sección "Cuenta corriente" más abajo.
+- **Clientes**: cuenta corriente. Se cargan los clientes habituales (nombre y teléfono opcional) y se ve cuánto debe cada uno, ordenados por el que más debe primero. Al entrar a un cliente se ve su historial completo (cada venta a cuenta y cada pago) y se puede registrar un pago para descontarle el saldo. Si el cliente tiene teléfono cargado, hay un botón para mandarle un recordatorio de cobro directo por WhatsApp (con el saldo ya escrito en el mensaje). Ver también la sección "Cuenta corriente" más abajo.
 - **Gastos**: cargar gastos (fecha, categoría, descripción, monto) y ver el historial.
+- **Cierres**: el historial de cierres de caja con arqueo — ver la sección más abajo.
 - **Reportes**: total vendido, cantidad de ventas, desglose por método de pago, total de gastos y el resultado (ventas − gastos), con períodos rápidos (hoy / esta semana / este mes) o un rango de fechas a elección. Además:
   - **Por caja**: elegís una caja específica (no es solo una lista) y ves su propio detalle — ventas, total, efectivo acumulado, gráfico por día, método de pago y productos más vendidos de esa caja en particular. También queda la vista "Todas" para comparar todas juntas de un vistazo.
   - **Por cajero**: cuánto vendió cada persona.
@@ -143,6 +144,12 @@ Pensado para el caso típico de un puesto mayorista: venderle a un comerciante c
 En el Panel del Dueño (pestaña **Clientes**) se ve cuánto debe cada uno, su historial completo de cargos y pagos, y se registran los pagos que van haciendo para descontarles el saldo.
 
 Corre sobre las mismas reglas que el resto del sistema: `clientes` y `cuenta_corriente_movimientos` (migración [`0006_cuenta_corriente.sql`](supabase/migrations/0006_cuenta_corriente.sql)) están aisladas por tenant con RLS, y el saldo se calcula sumando el historial de movimientos — nunca se guarda como un número que se pisa, mismo criterio que el stock.
+
+### Cierre de caja con arqueo
+
+Desde la app de Caja, un botón "Cerrar caja" en el encabezado calcula cuánto efectivo debería haber (la suma de las ventas en efectivo de esa caja desde el último cierre, o desde siempre si nunca se cerró) y le pide al cajero que cuente el efectivo real y lo escriba. Muestra al toque si falta, sobra o coincide, y guarda el cierre — no bloquea la caja, es solo un control puntual que se puede hacer las veces que se quiera (al final del turno, por ejemplo).
+
+El dueño ve el historial completo de estos cierres en la pestaña **Cierres** del panel: fecha, caja, lo esperado, lo contado y la diferencia — para notar patrones (una caja que siempre da faltante, por ejemplo) sin tener que estar presente en el momento del arqueo. Migración [`0007_cierres_caja.sql`](supabase/migrations/0007_cierres_caja.sql).
 
 ### Alertas de stock bajo por email
 

@@ -12,6 +12,16 @@ import {
   type Tenant
 } from '@cdc/shared'
 
+// wa.me necesita el teléfono solo con dígitos, con código de país
+// (por eso el formulario pide que se cargue así, ej: 5491122223333).
+function linkRecordatorioWhatsApp(cliente: Cliente, saldo: number, nombreTenant: string): string | null {
+  if (!cliente.telefono) return null
+  const digitos = cliente.telefono.replace(/\D/g, '')
+  if (!digitos) return null
+  const mensaje = `Hola ${cliente.nombre}, te escribo de ${nombreTenant} para recordarte que tenés un saldo pendiente de $${saldo.toFixed(2)}. ¡Gracias!`
+  return `https://wa.me/${digitos}?text=${encodeURIComponent(mensaje)}`
+}
+
 export function Clientes({ tenant, perfil }: { tenant: Tenant; perfil: Perfil }) {
   const [clientes, setClientes] = useState<Cliente[] | null>(null)
   const [saldos, setSaldos] = useState<Record<string, number>>({})
@@ -131,6 +141,18 @@ export function Clientes({ tenant, perfil }: { tenant: Tenant; perfil: Perfil })
               : 'Está al día'}
         </p>
 
+        {saldo > 0 &&
+          (() => {
+            const link = linkRecordatorioWhatsApp(clienteAbierto, saldo, tenant.nombre)
+            return link ? (
+              <a className="btn-whatsapp" href={link} target="_blank" rel="noopener noreferrer">
+                Recordar por WhatsApp
+              </a>
+            ) : (
+              <p className="app-status">Cargale el teléfono para poder mandarle un recordatorio.</p>
+            )
+          })()}
+
         <form className="panel-form" onSubmit={registrarPago}>
           <h3>Registrar pago</h3>
           <label>
@@ -207,7 +229,12 @@ export function Clientes({ tenant, perfil }: { tenant: Tenant; perfil: Perfil })
           </label>
           <label>
             Teléfono (opcional)
-            <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+            <input
+              type="text"
+              placeholder="Con código de país, ej: 5491122223333"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+            />
           </label>
           <div className="panel-form-acciones">
             <button type="button" className="btn-secundario" onClick={() => setMostrarForm(false)}>
@@ -237,26 +264,36 @@ export function Clientes({ tenant, perfil }: { tenant: Tenant; perfil: Perfil })
             </tr>
           </thead>
           <tbody>
-            {clientes.map((c) => {
-              const saldo = saldos[c.id] ?? 0
-              return (
-                <tr key={c.id} className={!c.activo ? 'fila-inactiva' : ''}>
-                  <td>
-                    <button className="link-btn-oscuro" onClick={() => abrirCliente(c)}>
-                      {c.nombre}
-                    </button>
-                  </td>
-                  <td>{c.telefono ?? '—'}</td>
-                  <td className={saldo > 0 ? 'texto-alerta' : ''}>{saldo > 0 ? `Debe $${saldo.toFixed(2)}` : 'Al día'}</td>
-                  <td>{c.activo ? 'Activo' : 'Inactivo'}</td>
-                  <td className="panel-tabla-acciones">
-                    <button className="link-btn-oscuro" onClick={() => alternarActivo(c)}>
-                      {c.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
+            {[...clientes]
+              .sort((a, b) => (saldos[b.id] ?? 0) - (saldos[a.id] ?? 0))
+              .map((c) => {
+                const saldo = saldos[c.id] ?? 0
+                const linkWhatsApp = saldo > 0 ? linkRecordatorioWhatsApp(c, saldo, tenant.nombre) : null
+                return (
+                  <tr key={c.id} className={!c.activo ? 'fila-inactiva' : ''}>
+                    <td>
+                      <button className="link-btn-oscuro" onClick={() => abrirCliente(c)}>
+                        {c.nombre}
+                      </button>
+                    </td>
+                    <td>{c.telefono ?? '—'}</td>
+                    <td className={saldo > 0 ? 'texto-alerta' : ''}>
+                      {saldo > 0 ? `Debe $${saldo.toFixed(2)}` : 'Al día'}
+                    </td>
+                    <td>{c.activo ? 'Activo' : 'Inactivo'}</td>
+                    <td className="panel-tabla-acciones">
+                      {linkWhatsApp && (
+                        <a className="link-btn-oscuro" href={linkWhatsApp} target="_blank" rel="noopener noreferrer">
+                          WhatsApp
+                        </a>
+                      )}
+                      <button className="link-btn-oscuro" onClick={() => alternarActivo(c)}>
+                        {c.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
           </tbody>
         </table>
       )}

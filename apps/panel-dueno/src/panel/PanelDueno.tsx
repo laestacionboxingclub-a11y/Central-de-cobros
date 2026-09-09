@@ -4,15 +4,17 @@ import { Productos } from './Productos'
 import { Stock } from './Stock'
 import { Clientes } from './Clientes'
 import { Gastos } from './Gastos'
+import { Cierres } from './Cierres'
 import { Reportes } from './Reportes'
 
-type Tab = 'productos' | 'stock' | 'clientes' | 'gastos' | 'reportes'
+type Tab = 'productos' | 'stock' | 'clientes' | 'gastos' | 'cierres' | 'reportes'
 
 const TABS: { id: Tab; etiqueta: string }[] = [
   { id: 'productos', etiqueta: 'Productos' },
   { id: 'stock', etiqueta: 'Stock' },
   { id: 'clientes', etiqueta: 'Clientes' },
   { id: 'gastos', etiqueta: 'Gastos' },
+  { id: 'cierres', etiqueta: 'Cierres' },
   { id: 'reportes', etiqueta: 'Reportes' }
 ]
 
@@ -55,6 +57,7 @@ export function PanelDueno({
         {tab === 'stock' && <Stock tenant={tenant} perfil={perfil} />}
         {tab === 'clientes' && <Clientes tenant={tenant} perfil={perfil} />}
         {tab === 'gastos' && <Gastos tenant={tenant} perfil={perfil} />}
+        {tab === 'cierres' && <Cierres tenant={tenant} />}
         {tab === 'reportes' && <Reportes tenant={tenant} />}
       </main>
     </div>
