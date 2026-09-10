@@ -20,7 +20,8 @@ import {
 const ETIQUETA_ROL: Record<RolPerfil, string> = {
   superadmin: 'Súper-admin',
   dueno: 'Dueño',
-  cajero: 'Cajero'
+  cajero: 'Cajero',
+  vendedor: 'Vendedor'
 }
 
 function hace7Dias() {

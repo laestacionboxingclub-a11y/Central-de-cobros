@@ -11,7 +11,7 @@ export interface Tenant {
   updated_at: string
 }
 
-export type RolPerfil = 'superadmin' | 'dueno' | 'cajero'
+export type RolPerfil = 'superadmin' | 'dueno' | 'cajero' | 'vendedor'
 
 export interface Perfil {
   id: string
@@ -137,4 +137,29 @@ export interface CierreCaja {
   diferencia: number
   cerrado_por: string | null
   creado_en: string
+}
+
+export type EstadoPedido = 'pendiente' | 'cobrado' | 'cancelado'
+
+export interface Pedido {
+  id: string
+  tenant_id: string
+  numero: number
+  nombre_referencia: string | null
+  estado: EstadoPedido
+  total: number
+  creado_por: string | null
+  creado_en: string
+  cobrado_en: string | null
+  cobrado_por: string | null
+  venta_id: string | null
+}
+
+export interface PedidoItem {
+  id: string
+  pedido_id: string
+  producto_id: string
+  cantidad: number
+  precio_unitario: number
+  subtotal: number
 }

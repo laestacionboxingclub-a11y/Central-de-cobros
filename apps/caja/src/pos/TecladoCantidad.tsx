@@ -10,27 +10,37 @@ function chipsPara(producto: Producto): number[] {
 export function TecladoCantidad({
   producto,
   cantidadInicial,
+  precioInicial,
   stockDisponible,
+  precioEditable = false,
   onConfirmar,
   onCancelar
 }: {
   producto: Producto
   cantidadInicial?: number
+  precioInicial?: number
   // Cuánto queda de este producto según los movimientos de stock (Paso 2).
   // undefined = todavía no se cargó ningún movimiento de este producto (no
   // hay dato, no es lo mismo que "hay 0"): en ese caso no se limita nada.
   stockDisponible: number | undefined
-  onConfirmar: (cantidad: number) => void
+  // Acá no hay precios fijos: el que vende negocia el precio con cada
+  // cliente. Cuando está prendido, se puede tocar el precio y escribir
+  // otro en vez del de catálogo.
+  precioEditable?: boolean
+  onConfirmar: (cantidad: number, precioUnitario: number) => void
   onCancelar: () => void
 }) {
-  const [valor, setValor] = useState(() => {
+  const [campoActivo, setCampoActivo] = useState<'cantidad' | 'precio'>('cantidad')
+  const [valorCantidad, setValorCantidad] = useState(() => {
     if (cantidadInicial) return String(cantidadInicial)
     return producto.unidad_medida === 'unidad' || producto.unidad_medida === 'docena' ? '1' : ''
   })
+  const [valorPrecio, setValorPrecio] = useState(() => String(precioInicial ?? producto.precio))
   const [avisoStock, setAvisoStock] = useState(false)
 
   function tocarTecla(tecla: string) {
     setAvisoStock(false)
+    const setValor = campoActivo === 'cantidad' ? setValorCantidad : setValorPrecio
     if (tecla === '⌫') {
       setValor((v) => v.slice(0, -1))
       return
@@ -44,23 +54,27 @@ export function TecladoCantidad({
 
   function elegirChip(c: number) {
     setAvisoStock(false)
-    setValor(String(c))
+    setCampoActivo('cantidad')
+    setValorCantidad(String(c))
   }
 
-  const cantidad = Number(valor)
+  const cantidad = Number(valorCantidad)
+  const precioUnitario = Number(valorPrecio)
   // Si todavía no hay ningún movimiento cargado para este producto no hay
   // dato de stock (no es que haya 0), así que no se limita nada.
   const hayControlDeStock = stockDisponible !== undefined
   const sinStock = hayControlDeStock && stockDisponible <= 0
-  const esValido = valor !== '' && cantidad > 0 && !sinStock
+  const esValido = valorCantidad !== '' && cantidad > 0 && valorPrecio !== '' && precioUnitario > 0 && !sinStock
+  const subtotal = (Number.isFinite(cantidad) ? cantidad : 0) * (Number.isFinite(precioUnitario) ? precioUnitario : 0)
 
   function confirmar() {
     if (hayControlDeStock && cantidad > stockDisponible) {
-      setValor(String(stockDisponible))
+      setValorCantidad(String(stockDisponible))
+      setCampoActivo('cantidad')
       setAvisoStock(true)
       return
     }
-    onConfirmar(cantidad)
+    onConfirmar(cantidad, precioUnitario)
   }
 
   return (
@@ -68,10 +82,34 @@ export function TecladoCantidad({
       <div className="teclado-card" onClick={(e) => e.stopPropagation()}>
         <p className="teclado-producto">{producto.nombre}</p>
 
-        <div className="teclado-display">
-          {valor === '' ? '0' : valor}
-          <span className="teclado-unidad">{producto.unidad_medida}</span>
-        </div>
+        <button
+          type="button"
+          className={`teclado-campo ${campoActivo === 'cantidad' ? 'activo' : ''}`}
+          onClick={() => setCampoActivo('cantidad')}
+        >
+          <span className="teclado-campo-etiqueta">Cantidad</span>
+          <span className="teclado-display">
+            {valorCantidad === '' ? '0' : valorCantidad}
+            <span className="teclado-unidad">{producto.unidad_medida}</span>
+          </span>
+        </button>
+
+        {precioEditable ? (
+          <button
+            type="button"
+            className={`teclado-campo ${campoActivo === 'precio' ? 'activo' : ''}`}
+            onClick={() => setCampoActivo('precio')}
+          >
+            <span className="teclado-campo-etiqueta">Precio (tocá para cambiarlo)</span>
+            <span className="teclado-display teclado-display-chico">
+              ${valorPrecio === '' ? '0' : valorPrecio}
+            </span>
+          </button>
+        ) : (
+          <p className="app-status teclado-precio-fijo">Precio: ${producto.precio.toFixed(2)}</p>
+        )}
+
+        <p className="teclado-subtotal">Subtotal: ${subtotal.toFixed(2)}</p>
 
         {hayControlDeStock && (
           <p className="app-status teclado-disponible">
@@ -89,13 +127,15 @@ export function TecladoCantidad({
           )
         )}
 
-        <div className="teclado-chips">
-          {chipsPara(producto).map((c) => (
-            <button key={c} type="button" onClick={() => elegirChip(c)}>
-              {c}
-            </button>
-          ))}
-        </div>
+        {campoActivo === 'cantidad' && (
+          <div className="teclado-chips">
+            {chipsPara(producto).map((c) => (
+              <button key={c} type="button" onClick={() => elegirChip(c)}>
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="teclado-grid">
           {TECLAS.map((t) => (

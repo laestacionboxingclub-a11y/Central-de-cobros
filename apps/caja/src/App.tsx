@@ -2,8 +2,9 @@ import { isSupabaseConfigured } from '@cdc/shared'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { LoginPage } from './auth/LoginPage'
 import { CajaLogueada } from './pos/CajaLogueada'
+import { TomarPedido } from './pedidos/TomarPedido'
 
-const ROLES_PERMITIDOS = ['cajero', 'dueno']
+const ROLES_PERMITIDOS = ['cajero', 'dueno', 'vendedor']
 const ETIQUETA_APP = 'App de Caja'
 
 function Contenido() {
@@ -66,6 +67,10 @@ function Contenido() {
         <button onClick={logout}>Cerrar sesión</button>
       </main>
     )
+  }
+
+  if (perfil.rol === 'vendedor') {
+    return <TomarPedido perfil={perfil} tenant={tenant} onLogout={logout} />
   }
 
   return <CajaLogueada perfil={perfil} tenant={tenant} onLogout={logout} />

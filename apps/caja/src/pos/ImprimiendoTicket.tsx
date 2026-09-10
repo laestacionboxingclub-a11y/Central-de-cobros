@@ -38,7 +38,7 @@ export function ImprimiendoTicket({
                 <span>
                   {l.cantidad} {l.producto.unidad_medida} × {l.producto.nombre}
                 </span>
-                <span>${(l.cantidad * l.producto.precio).toFixed(2)}</span>
+                <span>${(l.cantidad * l.precioUnitario).toFixed(2)}</span>
               </li>
             ))}
           </ul>

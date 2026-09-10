@@ -4,7 +4,7 @@ import type { CajaSeleccionada } from './localCaja'
 
 export interface VentaConfirmada {
   numero: string
-  items: { producto: Producto; cantidad: number }[]
+  items: { producto: Producto; cantidad: number; precioUnitario: number }[]
   total: number
   metodoPago: MetodoPago
   fecha: string
@@ -37,7 +37,7 @@ export function Comprobante({
               <span>
                 {linea.cantidad} {linea.producto.unidad_medida} × {linea.producto.nombre}
               </span>
-              <span>${(linea.cantidad * linea.producto.precio).toFixed(2)}</span>
+              <span>${(linea.cantidad * linea.precioUnitario).toFixed(2)}</span>
             </li>
           ))}
         </ul>

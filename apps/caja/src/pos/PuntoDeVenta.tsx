@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   crearCliente,
   fetchClientes,
+  fetchItemsDePedido,
   fetchProductos,
   fetchStockActual,
+  marcarPedidoCobrado,
   registrarCargoCuentaCorriente,
   registrarVenta,
   type Cliente,
   type MetodoPago,
+  type Pedido,
   type Perfil,
   type Producto,
   type Tenant
@@ -16,6 +19,7 @@ import { ETIQUETA_METODO } from './constants'
 import { CierreCaja } from './CierreCaja'
 import { Comprobante, type VentaConfirmada } from './Comprobante'
 import { ImprimiendoTicket } from './ImprimiendoTicket'
+import { PedidosPendientes } from '../pedidos/PedidosPendientes'
 import { TecladoCantidad } from './TecladoCantidad'
 import { siguienteNumeroComprobante, type CajaSeleccionada } from './localCaja'
 import {
@@ -34,6 +38,7 @@ import { useSincronizacion } from '../offline/useSincronizacion'
 interface LineaCarrito {
   producto: Producto
   cantidad: number
+  precioUnitario: number
 }
 
 const METODOS: MetodoPago[] = ['efectivo', 'posnet', 'transferencia', 'cuenta_corriente']
@@ -71,6 +76,9 @@ export function PuntoDeVenta({
   const [ventaPendiente, setVentaPendiente] = useState<VentaConfirmada | null>(null)
   const [ventaConfirmada, setVentaConfirmada] = useState<VentaConfirmada | null>(null)
   const [cerrandoCaja, setCerrandoCaja] = useState(false)
+  const [mostrandoPedidos, setMostrandoPedidos] = useState(false)
+  const [pedidoEnCurso, setPedidoEnCurso] = useState<Pedido | null>(null)
+  const [cargandoPedido, setCargandoPedido] = useState(false)
 
   const { enLinea, pendientes, sincronizando, sincronizarAhora, actualizarPendientes } = useSincronizacion()
 
@@ -120,31 +128,62 @@ export function PuntoDeVenta({
   }, [productos, busqueda])
 
   const total = useMemo(
-    () => carrito.reduce((acc, l) => acc + l.cantidad * l.producto.precio, 0),
+    () => carrito.reduce((acc, l) => acc + l.cantidad * l.precioUnitario, 0),
     [carrito]
   )
 
-  const cantidadEnEdicion = productoEnEdicion
-    ? carrito.find((l) => l.producto.id === productoEnEdicion.id)?.cantidad
+  const lineaEnEdicion = productoEnEdicion
+    ? carrito.find((l) => l.producto.id === productoEnEdicion.id)
     : undefined
 
-  function confirmarCantidad(cantidad: number) {
+  function confirmarLinea(cantidad: number, precioUnitario: number) {
     const producto = productoEnEdicion
     if (!producto) return
     setCarrito((actual) => {
       const idx = actual.findIndex((l) => l.producto.id === producto.id)
       if (idx >= 0) {
         const copia = [...actual]
-        copia[idx] = { ...copia[idx], cantidad }
+        copia[idx] = { ...copia[idx], cantidad, precioUnitario }
         return copia
       }
-      return [...actual, { producto, cantidad }]
+      return [...actual, { producto, cantidad, precioUnitario }]
     })
     setProductoEnEdicion(null)
   }
 
   function quitarLinea(productoId: string) {
     setCarrito((actual) => actual.filter((l) => l.producto.id !== productoId))
+  }
+
+  async function cargarPedido(pedido: Pedido) {
+    setMostrandoPedidos(false)
+    setCargandoPedido(true)
+    setErrorCobro(null)
+    try {
+      const items = await fetchItemsDePedido(pedido.id)
+      const lineas: LineaCarrito[] = []
+      for (const item of items) {
+        const producto = (productos ?? []).find((p) => p.id === item.producto_id)
+        if (!producto) continue
+        lineas.push({ producto, cantidad: item.cantidad, precioUnitario: item.precio_unitario })
+      }
+      if (lineas.length < items.length) {
+        setErrorCobro(
+          'Ojo: algún producto de este pedido ya no está activo en el catálogo y no se pudo cargar — revisá el total con el cliente antes de cobrar.'
+        )
+      }
+      setCarrito(lineas)
+      setPedidoEnCurso(pedido)
+    } catch {
+      setErrorCobro('No se pudo cargar el pedido. Probá de nuevo.')
+    } finally {
+      setCargandoPedido(false)
+    }
+  }
+
+  function cancelarPedidoEnCurso() {
+    setPedidoEnCurso(null)
+    setCarrito([])
   }
 
   async function crearClienteRapido() {
@@ -200,8 +239,8 @@ export function PuntoDeVenta({
       venta_id: ventaId,
       producto_id: l.producto.id,
       cantidad: l.cantidad,
-      precio_unitario: l.producto.precio,
-      subtotal: Number((l.cantidad * l.producto.precio).toFixed(2))
+      precio_unitario: l.precioUnitario,
+      subtotal: Number((l.cantidad * l.precioUnitario).toFixed(2))
     }))
     const movimientos = carrito.map((l) => ({
       id: crypto.randomUUID(),
@@ -255,6 +294,17 @@ export function PuntoDeVenta({
       }
     }
 
+    if (pedidoEnCurso) {
+      try {
+        await marcarPedidoCobrado(pedidoEnCurso.id, ventaId, perfil.id)
+      } catch {
+        // La venta ya se registró — si esto falla, el pedido queda como
+        // "pendiente" en la lista aunque ya se cobró. No es grave: se
+        // nota a simple vista si alguien lo busca de nuevo y ya no está
+        // en el carrito, y se puede marcar a mano después.
+      }
+    }
+
     // Descontamos el stock ya mismo en la pantalla (no esperamos a releer el
     // servidor): así, si el cajero encadena varias ventas seguidas del mismo
     // producto, cada una ve el stock ya actualizado por la anterior.
@@ -284,6 +334,7 @@ export function PuntoDeVenta({
     setCarrito([])
     setMetodoPago(null)
     setClienteId('')
+    setPedidoEnCurso(null)
     setCobrando(false)
   }
 
@@ -324,6 +375,10 @@ export function PuntoDeVenta({
     )
   }
 
+  if (mostrandoPedidos) {
+    return <PedidosPendientes tenant={tenant} onElegir={cargarPedido} onVolver={() => setMostrandoPedidos(false)} />
+  }
+
   return (
     <div className="pos-layout">
       <header className="pos-header no-imprimir">
@@ -331,6 +386,9 @@ export function PuntoDeVenta({
           <strong>{tenant.nombre}</strong> · {caja.nombre} · {perfil.nombre}
         </div>
         <div className="pos-header-acciones">
+          <button className="link-btn" onClick={() => setMostrandoPedidos(true)}>
+            Pedidos
+          </button>
           <button className="link-btn" onClick={() => setCerrandoCaja(true)}>
             Cerrar caja
           </button>
@@ -342,6 +400,19 @@ export function PuntoDeVenta({
           </button>
         </div>
       </header>
+
+      {pedidoEnCurso && (
+        <div className="pos-conexion no-imprimir en-linea">
+          Cobrando pedido nº {pedidoEnCurso.numero}
+          {pedidoEnCurso.nombre_referencia ? ` — ${pedidoEnCurso.nombre_referencia}` : ''}
+          {' · '}
+          <button className="link-btn pos-conexion-btn" onClick={cancelarPedidoEnCurso}>
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {cargandoPedido && <p className="app-status no-imprimir">Cargando pedido...</p>}
 
       <div className={`pos-conexion no-imprimir ${enLinea ? 'en-linea' : 'sin-linea'}`}>
         <span className="pos-conexion-punto" />
@@ -405,9 +476,9 @@ export function PuntoDeVenta({
             <li key={l.producto.id} className="pos-linea">
               <span className="pos-linea-nombre">{l.producto.nombre}</span>
               <button className="pos-cantidad-chip" onClick={() => setProductoEnEdicion(l.producto)}>
-                {l.cantidad} {l.producto.unidad_medida}
+                {l.cantidad} {l.producto.unidad_medida} × ${l.precioUnitario.toFixed(2)}
               </button>
-              <span className="pos-linea-subtotal">${(l.cantidad * l.producto.precio).toFixed(2)}</span>
+              <span className="pos-linea-subtotal">${(l.cantidad * l.precioUnitario).toFixed(2)}</span>
               <button className="pos-quitar" onClick={() => quitarLinea(l.producto.id)} aria-label="Quitar">
                 ✕
               </button>
@@ -500,9 +571,11 @@ export function PuntoDeVenta({
       {productoEnEdicion && (
         <TecladoCantidad
           producto={productoEnEdicion}
-          cantidadInicial={cantidadEnEdicion}
+          cantidadInicial={lineaEnEdicion?.cantidad}
+          precioInicial={lineaEnEdicion?.precioUnitario}
           stockDisponible={stock[productoEnEdicion.id]}
-          onConfirmar={confirmarCantidad}
+          precioEditable
+          onConfirmar={confirmarLinea}
           onCancelar={() => setProductoEnEdicion(null)}
         />
       )}
