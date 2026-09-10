@@ -10,6 +10,8 @@ export interface VentaConfirmada {
   fecha: string
   pendienteSync: boolean
   clienteNombre?: string
+  pagaCon?: number
+  vuelto?: number
 }
 
 export function Comprobante({
@@ -44,6 +46,12 @@ export function Comprobante({
         <hr />
         <p className="comprobante-total">Total: ${venta.total.toFixed(2)}</p>
         <p>Pago: {ETIQUETA_METODO[venta.metodoPago]}</p>
+        {venta.pagaCon !== undefined && (
+          <>
+            <p>Paga con: ${venta.pagaCon.toFixed(2)}</p>
+            <p className="comprobante-total">Vuelto: ${(venta.vuelto ?? 0).toFixed(2)}</p>
+          </>
+        )}
         {venta.clienteNombre && <p>Cliente: {venta.clienteNombre}</p>}
       </div>
 

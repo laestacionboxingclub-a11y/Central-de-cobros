@@ -64,6 +64,7 @@ export function PuntoDeVenta({
   const [carrito, setCarrito] = useState<LineaCarrito[]>([])
   const [productoEnEdicion, setProductoEnEdicion] = useState<Producto | null>(null)
   const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(null)
+  const [pagaCon, setPagaCon] = useState('')
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteId, setClienteId] = useState('')
   const [mostrarNuevoCliente, setMostrarNuevoCliente] = useState(false)
@@ -321,6 +322,8 @@ export function PuntoDeVenta({
       return nuevo
     })
 
+    const pagaConNum = metodoPago === 'efectivo' && pagaCon.trim() !== '' ? Number(pagaCon) : undefined
+
     setVentaPendiente({
       numero,
       items: carrito,
@@ -328,11 +331,14 @@ export function PuntoDeVenta({
       metodoPago,
       fecha: ahora,
       pendienteSync,
-      clienteNombre: clienteDeLaVenta?.nombre
+      clienteNombre: clienteDeLaVenta?.nombre,
+      pagaCon: pagaConNum,
+      vuelto: pagaConNum !== undefined ? Number((pagaConNum - total).toFixed(2)) : undefined
     })
     setImprimiendo(true)
     setCarrito([])
     setMetodoPago(null)
+    setPagaCon('')
     setClienteId('')
     setPedidoEnCurso(null)
     setCobrando(false)
@@ -493,12 +499,38 @@ export function PuntoDeVenta({
             <button
               key={m}
               className={`pos-metodo-btn ${metodoPago === m ? 'activo' : ''}`}
-              onClick={() => setMetodoPago(m)}
+              onClick={() => {
+                setMetodoPago(m)
+                setPagaCon('')
+              }}
             >
               {ETIQUETA_METODO[m]}
             </button>
           ))}
         </div>
+
+        {metodoPago === 'efectivo' && (
+          <div className="pos-vuelto">
+            <label>
+              ¿Con cuánto paga?
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={total.toFixed(2)}
+                value={pagaCon}
+                onChange={(e) => setPagaCon(e.target.value)}
+              />
+            </label>
+            {pagaCon.trim() !== '' && !Number.isNaN(Number(pagaCon)) && (
+              <p className={Number(pagaCon) < total ? 'warn' : 'pos-vuelto-monto'}>
+                {Number(pagaCon) < total
+                  ? `Todavía faltan $${(total - Number(pagaCon)).toFixed(2)}`
+                  : `Vuelto: $${(Number(pagaCon) - total).toFixed(2)}`}
+              </p>
+            )}
+          </div>
+        )}
 
         {metodoPago === 'cuenta_corriente' && (
           <div className="pos-cliente">
