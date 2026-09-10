@@ -40,6 +40,11 @@ export interface Producto {
   activo: boolean
   created_at: string
   updated_at: string
+  // Atajo de "bolsa"/"cajón" entero: null si este producto no lo tiene.
+  // El stock sigue siendo siempre en unidad_medida (ej: kg).
+  unidad_alternativa: string | null
+  equivalencia_alternativa: number | null
+  precio_alternativa: number | null
 }
 
 export type MetodoPago = 'efectivo' | 'posnet' | 'transferencia' | 'cuenta_corriente'

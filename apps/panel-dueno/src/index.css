@@ -270,6 +270,16 @@ body {
   font-weight: 600;
 }
 
+.panel-form-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+
+.panel-form-checkbox input {
+  width: auto;
+}
+
 .panel-form input,
 .panel-form select {
   padding: 0.55rem 0.7rem;

@@ -16,6 +16,9 @@ export interface NuevoProducto {
   precio: number
   stock_minimo: number | null
   foto_url: string | null
+  unidad_alternativa?: string | null
+  equivalencia_alternativa?: number | null
+  precio_alternativa?: number | null
 }
 
 export async function crearProducto(datos: NuevoProducto): Promise<Producto> {
@@ -31,6 +34,9 @@ export interface CambiosProducto {
   stock_minimo?: number | null
   foto_url?: string | null
   activo?: boolean
+  unidad_alternativa?: string | null
+  equivalencia_alternativa?: number | null
+  precio_alternativa?: number | null
 }
 
 export async function actualizarProducto(id: string, cambios: CambiosProducto): Promise<Producto> {

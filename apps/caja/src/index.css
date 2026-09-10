@@ -667,6 +667,25 @@ body {
   cursor: pointer;
 }
 
+.teclado-chip-bolsa {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1.5px dashed #a2701b;
+  border-radius: 8px;
+  background: #f1e3c3;
+  color: #7a5313;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.teclado-chip-bolsa:active {
+  transform: scale(0.98);
+}
+
 .teclado-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

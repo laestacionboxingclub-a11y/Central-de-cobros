@@ -58,6 +58,24 @@ export function TecladoCantidad({
     setValorCantidad(String(c))
   }
 
+  // Atajo de bolsa/cajón entero: carga los kg que corresponden y ajusta el
+  // precio por kg para que el total dé el precio de la bolsa entera — el
+  // stock sigue siendo siempre en la unidad de base (kg), no se toca nada
+  // del resto del sistema.
+  const tieneAtajoBolsa =
+    producto.unidad_alternativa !== null &&
+    producto.equivalencia_alternativa !== null &&
+    producto.equivalencia_alternativa > 0 &&
+    producto.precio_alternativa !== null
+
+  function elegirBolsa() {
+    if (!tieneAtajoBolsa || producto.equivalencia_alternativa === null || producto.precio_alternativa === null) return
+    setAvisoStock(false)
+    setCampoActivo('cantidad')
+    setValorCantidad(String(producto.equivalencia_alternativa))
+    setValorPrecio(String(Number((producto.precio_alternativa / producto.equivalencia_alternativa).toFixed(4))))
+  }
+
   const cantidad = Number(valorCantidad)
   const precioUnitario = Number(valorPrecio)
   // Si todavía no hay ningún movimiento cargado para este producto no hay
@@ -135,6 +153,13 @@ export function TecladoCantidad({
               </button>
             ))}
           </div>
+        )}
+
+        {campoActivo === 'cantidad' && tieneAtajoBolsa && (
+          <button type="button" className="teclado-chip-bolsa" onClick={elegirBolsa}>
+            1 {producto.unidad_alternativa} ({producto.equivalencia_alternativa} {producto.unidad_medida}) — $
+            {producto.precio_alternativa?.toFixed(2)}
+          </button>
         )}
 
         <div className="teclado-grid">

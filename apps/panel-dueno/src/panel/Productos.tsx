@@ -14,9 +14,23 @@ interface FormState {
   precio: string
   stock_minimo: string
   foto_url: string
+  tieneAtajo: boolean
+  unidad_alternativa: string
+  equivalencia_alternativa: string
+  precio_alternativa: string
 }
 
-const FORM_VACIO: FormState = { nombre: '', unidad_medida: 'kg', precio: '', stock_minimo: '', foto_url: '' }
+const FORM_VACIO: FormState = {
+  nombre: '',
+  unidad_medida: 'kg',
+  precio: '',
+  stock_minimo: '',
+  foto_url: '',
+  tieneAtajo: false,
+  unidad_alternativa: 'bolsa',
+  equivalencia_alternativa: '',
+  precio_alternativa: ''
+}
 
 export function Productos({ tenant }: { tenant: Tenant }) {
   const [productos, setProductos] = useState<Producto[] | null>(null)
@@ -62,7 +76,11 @@ export function Productos({ tenant }: { tenant: Tenant }) {
       unidad_medida: p.unidad_medida,
       precio: String(p.precio),
       stock_minimo: p.stock_minimo === null ? '' : String(p.stock_minimo),
-      foto_url: p.foto_url ?? ''
+      foto_url: p.foto_url ?? '',
+      tieneAtajo: p.unidad_alternativa !== null,
+      unidad_alternativa: p.unidad_alternativa ?? 'bolsa',
+      equivalencia_alternativa: p.equivalencia_alternativa === null ? '' : String(p.equivalencia_alternativa),
+      precio_alternativa: p.precio_alternativa === null ? '' : String(p.precio_alternativa)
     })
     setMostrarForm(true)
   }
@@ -77,7 +95,10 @@ export function Productos({ tenant }: { tenant: Tenant }) {
         unidad_medida: form.unidad_medida.trim() || 'unidad',
         precio: Number(form.precio) || 0,
         stock_minimo: form.stock_minimo.trim() === '' ? null : Number(form.stock_minimo),
-        foto_url: form.foto_url.trim() === '' ? null : form.foto_url.trim()
+        foto_url: form.foto_url.trim() === '' ? null : form.foto_url.trim(),
+        unidad_alternativa: form.tieneAtajo ? form.unidad_alternativa.trim() || null : null,
+        equivalencia_alternativa: form.tieneAtajo && form.equivalencia_alternativa.trim() !== '' ? Number(form.equivalencia_alternativa) : null,
+        precio_alternativa: form.tieneAtajo && form.precio_alternativa.trim() !== '' ? Number(form.precio_alternativa) : null
       }
       if (editando) {
         await actualizarProducto(editando.id, datos)
@@ -223,6 +244,50 @@ export function Productos({ tenant }: { tenant: Tenant }) {
               onChange={(e) => setForm({ ...form, foto_url: e.target.value })}
             />
           </label>
+
+          <label className="panel-form-checkbox">
+            <input
+              type="checkbox"
+              checked={form.tieneAtajo}
+              onChange={(e) => setForm({ ...form, tieneAtajo: e.target.checked })}
+            />
+            También se vende entero por bolsa/cajón (además de suelto por {form.unidad_medida || 'kg'})
+          </label>
+
+          {form.tieneAtajo && (
+            <>
+              <label>
+                ¿Cómo se llama esa unidad?
+                <input
+                  type="text"
+                  list="unidades-sugeridas"
+                  value={form.unidad_alternativa}
+                  onChange={(e) => setForm({ ...form, unidad_alternativa: e.target.value })}
+                />
+              </label>
+              <label>
+                Cuántos {form.unidad_medida || 'kg'} tiene una {form.unidad_alternativa || 'bolsa'}
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={form.equivalencia_alternativa}
+                  onChange={(e) => setForm({ ...form, equivalencia_alternativa: e.target.value })}
+                />
+              </label>
+              <label>
+                Precio de la {form.unidad_alternativa || 'bolsa'} entera
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.precio_alternativa}
+                  onChange={(e) => setForm({ ...form, precio_alternativa: e.target.value })}
+                />
+              </label>
+            </>
+          )}
+
           <div className="panel-form-acciones">
             <button type="button" className="btn-secundario" onClick={() => setMostrarForm(false)}>
               Cancelar
